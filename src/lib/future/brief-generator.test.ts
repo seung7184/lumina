@@ -54,6 +54,9 @@ describe("generateDeterministicBrief", () => {
 
     expect(second).toEqual(first);
     expect(first.generatedBy).toBe("local-deterministic");
+    expect(first.providerId).toBe("local-deterministic-brief");
+    expect(first.providerName).toBe("Local Deterministic Brief");
+    expect(first.providerReliability).toBe("demo");
     expect(first.evidenceCards).toHaveLength(2);
     expect(first.evidenceCards[0]).toMatchObject({
       id: "evidence-src-test-seg-1",
@@ -74,6 +77,14 @@ describe("generateDeterministicBrief", () => {
     });
     expect(first.blocks.some((block) => block.kind === "limitation")).toBe(true);
     expect(first.citationIds).toEqual(["cite-1", "cite-2"]);
+    expect(first.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "LOCAL_BRIEF_ONLY",
+          message: "Generated locally from existing source segments; no AI model was used.",
+        }),
+      ]),
+    );
   });
 
   it("limits evidence cards, ignores blank segments, and never invents citation IDs", () => {

@@ -214,12 +214,14 @@ describe("WorkspaceShell", () => {
     const brief = screen.getByRole("region", { name: "Local source-grounded brief" });
     expect(within(brief).getByRole("heading", { name: "Local source-grounded brief" })).toBeInTheDocument();
     expect(within(brief).getByText("Generated from current source segments · no AI model used")).toBeInTheDocument();
+    expect(within(brief).getByText("Provider: Local Deterministic Brief · demo · No AI model used")).toBeInTheDocument();
     expect(within(brief).getByText("Evidence cards")).toBeInTheDocument();
     expect(within(brief).getByText("Brief blocks")).toBeInTheDocument();
     expect(within(brief).getAllByText(/AI knowledge is severely lacking right now/i).length).toBeGreaterThan(0);
     expect(within(brief).getAllByText(/Source-backed point:/i).length).toBeGreaterThan(0);
     expect(within(brief).getAllByRole("link", { name: "Citation 1" }).length).toBeGreaterThan(0);
     expect(screen.queryByText(/AI analyzed/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /OpenAI brief|Anthropic brief|Gemini brief/i })).not.toBeInTheDocument();
   });
 
   it("clears the local brief when a mock webpage or PDF source replaces the active source", async () => {

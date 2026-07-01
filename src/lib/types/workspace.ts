@@ -189,6 +189,9 @@ export interface DeterministicBrief {
   title: string;
   subtitle: string;
   generatedBy: "local-deterministic";
+  providerId?: string;
+  providerName?: string;
+  providerReliability?: "demo" | "experimental" | "production";
   evidenceCards: EvidenceCard[];
   blocks: BriefBlock[];
   citationIds: string[];
