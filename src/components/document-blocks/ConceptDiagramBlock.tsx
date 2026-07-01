@@ -4,9 +4,10 @@ import { CitationMarker } from "@/components/workspace/CitationMarker";
 
 interface ConceptDiagramBlockProps {
   block: ConceptDiagramBlockType;
+  onMockAction: (message: string) => void;
 }
 
-export function ConceptDiagramBlock({ block }: ConceptDiagramBlockProps) {
+export function ConceptDiagramBlock({ block, onMockAction }: ConceptDiagramBlockProps) {
   const upper = block.paths.find((path) => path.tone === "positive");
   const lower = block.paths.find((path) => path.tone === "negative");
 
@@ -54,19 +55,19 @@ export function ConceptDiagramBlock({ block }: ConceptDiagramBlockProps) {
         </span>
       </div>
       <div className="visual-block__actions">
-        <button type="button">
+        <button type="button" onClick={() => onMockAction("Diagram opened in mock expanded state.")}>
           <Expand size={14} aria-hidden="true" />
           Expand
         </button>
-        <button type="button">
+        <button type="button" onClick={() => onMockAction("Diagram regeneration is mocked for this slice.")}>
           <RefreshCcw size={14} aria-hidden="true" />
           Regenerate
         </button>
-        <button type="button">
+        <button type="button" onClick={() => onMockAction("Diagram summary copied as mock text.")}>
           <Copy size={14} aria-hidden="true" />
           Copy
         </button>
-        <button type="button">
+        <button type="button" onClick={() => onMockAction("Mock diagram image saved.")}>
           <ImageDown size={14} aria-hidden="true" />
           Save image
         </button>

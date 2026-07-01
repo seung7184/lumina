@@ -3,6 +3,7 @@ import { HighlightItem } from "@/components/context-panel/HighlightItem";
 
 interface HighlightTabProps {
   highlights: HighlightItemType[];
+  onMockAction: (message: string) => void;
 }
 
 const sections = [
@@ -12,7 +13,7 @@ const sections = [
   ["user_note", "Your notes"],
 ] as const;
 
-export function HighlightTab({ highlights }: HighlightTabProps) {
+export function HighlightTab({ highlights, onMockAction }: HighlightTabProps) {
   return (
     <div className="context-tab-body" role="tabpanel" aria-label="Highlight">
       {sections.map(([category, label]) => {
@@ -29,7 +30,7 @@ export function HighlightTab({ highlights }: HighlightTabProps) {
           </section>
         );
       })}
-      <button className="export-selected" type="button">
+      <button className="export-selected" type="button" onClick={() => onMockAction("Selected highlights added to mock export.")}>
         Export selected · 3
       </button>
     </div>

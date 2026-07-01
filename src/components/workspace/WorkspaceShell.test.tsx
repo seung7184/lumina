@@ -26,6 +26,12 @@ describe("WorkspaceShell", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Assistant/i }));
     expect(screen.getByText("Validate this idea")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Explain more simply/i }));
+    expect(screen.getByLabelText(/Ask anything about this source/i)).toHaveValue(
+      "Turn the idea into one plain-language explanation.",
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Send assistant question/i }));
+    expect(screen.getByText(/Mock response queued from this source/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Highlight/i }));
     expect(screen.getByText("Needs validation")).toBeInTheDocument();
@@ -41,5 +47,7 @@ describe("WorkspaceShell", () => {
     expect(within(menu).getByText("Markdown")).toBeInTheDocument();
     fireEvent.click(within(menu).getByRole("radio", { name: /Slides/i }));
     expect(within(menu).getByRole("radio", { name: /Slides/i })).toBeChecked();
+    fireEvent.click(within(menu).getByRole("button", { name: /링크 복사|Copy link/i }));
+    expect(screen.getAllByText(/목업 공유 링크를 복사했습니다|Mock share link copied/i).length).toBeGreaterThan(0);
   });
 });

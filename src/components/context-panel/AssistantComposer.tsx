@@ -1,13 +1,24 @@
 import { AtSign, Paperclip, Send } from "lucide-react";
 
 interface AssistantComposerProps {
+  draft: string;
   responseMode: string;
+  onDraftChange: (draft: string) => void;
+  onMockAction: (message: string) => void;
   onResponseModeChange: (mode: string) => void;
+  onSend: () => void;
 }
 
 const responseModes = ["Standard", "Critical", "Action-oriented", "Study", "Founder", "Developer", "Investor"];
 
-export function AssistantComposer({ responseMode, onResponseModeChange }: AssistantComposerProps) {
+export function AssistantComposer({
+  draft,
+  responseMode,
+  onDraftChange,
+  onMockAction,
+  onResponseModeChange,
+  onSend,
+}: AssistantComposerProps) {
   return (
     <div className="assistant-composer">
       <span className="eyebrow">Response mode</span>
@@ -24,15 +35,24 @@ export function AssistantComposer({ responseMode, onResponseModeChange }: Assist
         ))}
       </div>
       <div className="composer-box">
-        <span>Ask anything about this source...</span>
+        <label className="sr-only" htmlFor="assistant-draft">
+          Ask anything about this source
+        </label>
+        <textarea
+          id="assistant-draft"
+          value={draft}
+          onChange={(event) => onDraftChange(event.target.value)}
+          placeholder="Ask anything about this source..."
+          rows={3}
+        />
         <div>
-          <button type="button" aria-label="Attach file">
+          <button type="button" aria-label="Attach file" onClick={() => onMockAction("File attachment is mocked in this slice.")}>
             <Paperclip size={16} aria-hidden="true" />
           </button>
-          <button type="button" aria-label="Mention source">
+          <button type="button" aria-label="Mention source" onClick={() => onDraftChange(`${draft.trim()} @source`.trim())}>
             <AtSign size={16} aria-hidden="true" />
           </button>
-          <button type="button" aria-label="Send assistant question">
+          <button type="button" aria-label="Send assistant question" onClick={onSend}>
             <Send size={16} aria-hidden="true" />
           </button>
         </div>

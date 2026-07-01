@@ -6,19 +6,29 @@ import { SuggestedPromptCard } from "@/components/context-panel/SuggestedPromptC
 interface AssistantTabProps {
   messages: AssistantMessage[];
   prompts: AssistantPrompt[];
+  draft: string;
   scope: "source" | "collection" | "web_source";
   responseMode: string;
+  onDraftChange: (draft: string) => void;
+  onMockAction: (message: string) => void;
+  onPromptSelect: (promptId: string) => void;
   onScopeChange: (scope: "source" | "collection" | "web_source") => void;
   onResponseModeChange: (mode: string) => void;
+  onSend: () => void;
 }
 
 export function AssistantTab({
   messages,
   prompts,
+  draft,
   scope,
   responseMode,
+  onDraftChange,
+  onMockAction,
+  onPromptSelect,
   onScopeChange,
   onResponseModeChange,
+  onSend,
 }: AssistantTabProps) {
   return (
     <div className="assistant-tab" role="tabpanel" aria-label="Assistant">
@@ -32,7 +42,7 @@ export function AssistantTab({
           ))}
         </div>
         {messages.map((message) => (
-          <article className="assistant-message" key={message.id}>
+          <article className={`assistant-message assistant-message--${message.role}`} key={message.id}>
             <div className="assistant-avatar">
               <Bot size={17} aria-hidden="true" />
             </div>
@@ -46,11 +56,18 @@ export function AssistantTab({
         <span className="eyebrow">Suggested actions</span>
         <div className="prompt-list">
           {prompts.map((prompt) => (
-            <SuggestedPromptCard key={prompt.id} prompt={prompt} />
+            <SuggestedPromptCard key={prompt.id} prompt={prompt} onSelect={() => onPromptSelect(prompt.id)} />
           ))}
         </div>
       </div>
-      <AssistantComposer responseMode={responseMode} onResponseModeChange={onResponseModeChange} />
+      <AssistantComposer
+        draft={draft}
+        responseMode={responseMode}
+        onDraftChange={onDraftChange}
+        onMockAction={onMockAction}
+        onResponseModeChange={onResponseModeChange}
+        onSend={onSend}
+      />
     </div>
   );
 }

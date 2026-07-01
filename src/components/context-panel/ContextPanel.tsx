@@ -17,6 +17,7 @@ interface ContextPanelProps {
   showTranslation: boolean;
   assistantMessages: AssistantMessage[];
   assistantPrompts: AssistantPrompt[];
+  assistantDraft: string;
   highlights: HighlightItem[];
   assistantScope: "source" | "collection" | "web_source";
   responseMode: string;
@@ -24,6 +25,10 @@ interface ContextPanelProps {
   onActiveSegmentChange: (id: string) => void;
   onTranslationToggle: () => void;
   onAssistantScopeChange: (scope: "source" | "collection" | "web_source") => void;
+  onAssistantDraftChange: (draft: string) => void;
+  onAssistantSend: () => void;
+  onMockAction: (message: string) => void;
+  onPromptSelect: (promptId: string) => void;
   onResponseModeChange: (mode: string) => void;
 }
 
@@ -35,6 +40,7 @@ export function ContextPanel({
   showTranslation,
   assistantMessages,
   assistantPrompts,
+  assistantDraft,
   highlights,
   assistantScope,
   responseMode,
@@ -42,6 +48,10 @@ export function ContextPanel({
   onActiveSegmentChange,
   onTranslationToggle,
   onAssistantScopeChange,
+  onAssistantDraftChange,
+  onAssistantSend,
+  onMockAction,
+  onPromptSelect,
   onResponseModeChange,
 }: ContextPanelProps) {
   return (
@@ -66,20 +76,26 @@ export function ContextPanel({
           showTranslation={showTranslation}
           source={source}
           onActiveSegmentChange={onActiveSegmentChange}
+          onMockAction={onMockAction}
           onTranslationToggle={onTranslationToggle}
         />
       ) : null}
       {activeTab === "assistant" ? (
         <AssistantTab
           messages={assistantMessages}
+          draft={assistantDraft}
           prompts={assistantPrompts}
           responseMode={responseMode}
           scope={assistantScope}
+          onDraftChange={onAssistantDraftChange}
+          onMockAction={onMockAction}
+          onPromptSelect={onPromptSelect}
           onResponseModeChange={onResponseModeChange}
+          onSend={onAssistantSend}
           onScopeChange={onAssistantScopeChange}
         />
       ) : null}
-      {activeTab === "highlight" ? <HighlightTab highlights={highlights} /> : null}
+      {activeTab === "highlight" ? <HighlightTab highlights={highlights} onMockAction={onMockAction} /> : null}
     </aside>
   );
 }

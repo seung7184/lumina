@@ -18,6 +18,7 @@ interface DocumentToolbarProps {
   onVisualsToggle: () => void;
   onExportToggle: () => void;
   onExportOptionsChange: (options: ExportOptions) => void;
+  onMockAction: (message: string) => void;
 }
 
 export function DocumentToolbar({
@@ -35,6 +36,7 @@ export function DocumentToolbar({
   onVisualsToggle,
   onExportToggle,
   onExportOptionsChange,
+  onMockAction,
 }: DocumentToolbarProps) {
   const copy = labels[language];
 
@@ -81,12 +83,21 @@ export function DocumentToolbar({
         type="button"
         aria-pressed={visualsEnabled}
         aria-label="Toggle visual blocks"
-        onClick={onVisualsToggle}
+        onClick={() => {
+          onVisualsToggle();
+          onMockAction(visualsEnabled ? "Visual blocks hidden." : "Visual blocks shown.");
+        }}
         title="Visual blocks"
       >
         <Grid2X2 size={16} aria-hidden="true" />
       </button>
-      <button className="icon-button is-active" type="button" aria-label="Citation links" title="Citation links">
+      <button
+        className="icon-button is-active"
+        type="button"
+        aria-label="Citation links"
+        title="Citation links"
+        onClick={() => onMockAction("Citation links are visible in the document.")}
+      >
         <Link2 size={16} aria-hidden="true" />
       </button>
       <div className="export-anchor">
@@ -95,13 +106,31 @@ export function DocumentToolbar({
           Export
         </button>
         {exportOpen ? (
-          <ExportMenu options={exportOptions} onChange={onExportOptionsChange} onClose={onExportToggle} />
+          <ExportMenu
+            language={language}
+            options={exportOptions}
+            onChange={onExportOptionsChange}
+            onClose={onExportToggle}
+            onMockAction={onMockAction}
+          />
         ) : null}
       </div>
-      <button className="icon-button" type="button" aria-label="Preview reading view" title="Preview reading view">
+      <button
+        className="icon-button"
+        type="button"
+        aria-label="Preview reading view"
+        title="Preview reading view"
+        onClick={() => onMockAction("Reading preview is mocked in this slice.")}
+      >
         <Eye size={16} aria-hidden="true" />
       </button>
-      <button className="icon-button" type="button" aria-label="Share" title="Share">
+      <button
+        className="icon-button"
+        type="button"
+        aria-label="Share"
+        title="Share"
+        onClick={() => onMockAction("Mock share link copied.")}
+      >
         <Share2 size={16} aria-hidden="true" />
       </button>
     </div>

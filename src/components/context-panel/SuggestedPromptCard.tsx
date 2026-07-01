@@ -3,6 +3,7 @@ import type { AssistantPrompt } from "@/lib/types/workspace";
 
 interface SuggestedPromptCardProps {
   prompt: AssistantPrompt;
+  onSelect: () => void;
 }
 
 const iconByPrompt: Record<string, React.ReactNode> = {
@@ -14,9 +15,9 @@ const iconByPrompt: Record<string, React.ReactNode> = {
   "p-compare": <Search size={16} aria-hidden="true" />,
 };
 
-export function SuggestedPromptCard({ prompt }: SuggestedPromptCardProps) {
+export function SuggestedPromptCard({ prompt, onSelect }: SuggestedPromptCardProps) {
   return (
-    <button className="prompt-card" type="button">
+    <button className="prompt-card" type="button" onClick={onSelect}>
       {iconByPrompt[prompt.id]}
       <span>
         <strong>{prompt.label}</strong>

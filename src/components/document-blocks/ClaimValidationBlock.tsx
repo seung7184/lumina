@@ -3,9 +3,10 @@ import type { ClaimValidationBlock as ClaimValidationBlockType } from "@/lib/typ
 
 interface ClaimValidationBlockProps {
   block: ClaimValidationBlockType;
+  onMockAction: (message: string) => void;
 }
 
-export function ClaimValidationBlock({ block }: ClaimValidationBlockProps) {
+export function ClaimValidationBlock({ block, onMockAction }: ClaimValidationBlockProps) {
   const validation = block.validation;
 
   return (
@@ -32,7 +33,9 @@ export function ClaimValidationBlock({ block }: ClaimValidationBlockProps) {
       </div>
       <div className="claim-block__footer">
         <span>{validation.coverageLabel}</span>
-        <span>{validation.suggestedFollowUp}</span>
+        <button type="button" onClick={() => onMockAction("Follow-up question sent to the mock assistant composer.")}>
+          {validation.suggestedFollowUp}
+        </button>
       </div>
     </section>
   );

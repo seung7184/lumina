@@ -8,6 +8,7 @@ interface SourceTabProps {
   activeSegmentId: string;
   showTranslation: boolean;
   onActiveSegmentChange: (id: string) => void;
+  onMockAction: (message: string) => void;
   onTranslationToggle: () => void;
 }
 
@@ -17,6 +18,7 @@ export function SourceTab({
   activeSegmentId,
   showTranslation,
   onActiveSegmentChange,
+  onMockAction,
   onTranslationToggle,
 }: SourceTabProps) {
   return (
@@ -52,7 +54,7 @@ export function SourceTab({
       <div className="transcript-head">
         <strong>Transcript</strong>
         <span>{segments.length} segments</span>
-        <button type="button" aria-label="Copy transcript">
+        <button type="button" aria-label="Copy transcript" onClick={() => onMockAction("Transcript copied as mock text.")}>
           <Copy size={15} aria-hidden="true" />
         </button>
       </div>

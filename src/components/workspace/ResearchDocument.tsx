@@ -19,6 +19,7 @@ interface ResearchDocumentProps {
   visualsEnabled: boolean;
   onLanguageChange: (language: LanguageCode) => void;
   onReportModeChange: (modeId: ReportMode["id"]) => void;
+  onMockAction: (message: string) => void;
 }
 
 export function ResearchDocument({
@@ -30,16 +31,23 @@ export function ResearchDocument({
   visualsEnabled,
   onLanguageChange,
   onReportModeChange,
+  onMockAction,
 }: ResearchDocumentProps) {
   const citationMap = new Map(summary.citations.map((citation) => [citation.id, citation]));
 
   return (
     <main className="document-pane" aria-label="Research document">
       <article className="research-document">
-        <DocumentHeader source={source} summary={summary} language={language} onLanguageChange={onLanguageChange} />
+        <DocumentHeader
+          source={source}
+          summary={summary}
+          language={language}
+          onLanguageChange={onLanguageChange}
+          onMockAction={onMockAction}
+        />
         <GroundingLegend language={language} sourceCoverage={summary.sourceCoverage} />
         {summary.blocks.map((block) =>
-          renderBlock(block, citationMap, visualsEnabled, reportModes, activeModeId, language, onReportModeChange),
+          renderBlock(block, citationMap, visualsEnabled, reportModes, activeModeId, language, onReportModeChange, onMockAction),
         )}
       </article>
     </main>
@@ -54,6 +62,7 @@ function renderBlock(
   activeModeId: string,
   language: LanguageCode,
   onReportModeChange: (modeId: ReportMode["id"]) => void,
+  onMockAction: (message: string) => void,
 ) {
   if (block.kind === "table_of_contents") {
     return (
@@ -81,13 +90,13 @@ function renderBlock(
     );
   }
   if (block.kind === "visual") {
-    return visualsEnabled ? <ConceptDiagramBlock block={block} key={block.id} /> : null;
+    return visualsEnabled ? <ConceptDiagramBlock block={block} key={block.id} onMockAction={onMockAction} /> : null;
   }
   if (block.kind === "key_takeaways") {
     return <KeyTakeawaysBlock block={block} key={block.id} />;
   }
   if (block.kind === "claim_validation") {
-    return <ClaimValidationBlock block={block} key={block.id} />;
+    return <ClaimValidationBlock block={block} key={block.id} onMockAction={onMockAction} />;
   }
   if (block.kind === "action_items") {
     return <ActionItemsBlock block={block} key={block.id} />;

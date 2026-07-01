@@ -5,9 +5,10 @@ import { labels } from "@/lib/i18n/labels";
 interface LanguageControlBarProps {
   language: LanguageCode;
   onLanguageChange: (language: LanguageCode) => void;
+  onMockAction: () => void;
 }
 
-export function LanguageControlBar({ language, onLanguageChange }: LanguageControlBarProps) {
+export function LanguageControlBar({ language, onLanguageChange, onMockAction }: LanguageControlBarProps) {
   const copy = labels[language];
 
   return (
@@ -37,7 +38,7 @@ export function LanguageControlBar({ language, onLanguageChange }: LanguageContr
         <span className="eyebrow">{copy.source}</span>
         <strong>한국어</strong>
       </span>
-      <button className="ghost-action" type="button">
+      <button className="ghost-action" type="button" onClick={onMockAction}>
         <Languages size={15} aria-hidden="true" />
         {copy.generateBilingual}
       </button>

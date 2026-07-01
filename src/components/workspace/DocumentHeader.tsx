@@ -7,9 +7,10 @@ interface DocumentHeaderProps {
   summary: SummaryDocument;
   language: LanguageCode;
   onLanguageChange: (language: LanguageCode) => void;
+  onMockAction: (message: string) => void;
 }
 
-export function DocumentHeader({ source, summary, language, onLanguageChange }: DocumentHeaderProps) {
+export function DocumentHeader({ source, summary, language, onLanguageChange, onMockAction }: DocumentHeaderProps) {
   return (
     <header className="document-header">
       <div className="breadcrumb-row">
@@ -33,7 +34,11 @@ export function DocumentHeader({ source, summary, language, onLanguageChange }: 
           Source 한국어
         </span>
       </div>
-      <LanguageControlBar language={language} onLanguageChange={onLanguageChange} />
+      <LanguageControlBar
+        language={language}
+        onLanguageChange={onLanguageChange}
+        onMockAction={() => onMockAction("Bilingual note generation is mocked for this slice.")}
+      />
       <p className={language === "ko" ? "document-abstract ko-copy" : "document-abstract"}>{summary.abstract}</p>
     </header>
   );
