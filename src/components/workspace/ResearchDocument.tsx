@@ -1,3 +1,4 @@
+import { Copy, Files } from "lucide-react";
 import type {
   BriefBlock,
   CitationAuditResult,
@@ -30,6 +31,8 @@ interface ResearchDocumentProps {
   activeModeId: string;
   visualsEnabled: boolean;
   onGenerateLocalBrief: () => void;
+  onCopyEvidenceCardsMarkdown: () => void;
+  onCopyLocalBriefMarkdown: () => void;
   onLanguageChange: (language: LanguageCode) => void;
   onReportModeChange: (modeId: ReportMode["id"]) => void;
   onMockAction: (message: string) => void;
@@ -44,6 +47,8 @@ export function ResearchDocument({
   activeModeId,
   visualsEnabled,
   onGenerateLocalBrief,
+  onCopyEvidenceCardsMarkdown,
+  onCopyLocalBriefMarkdown,
   onLanguageChange,
   onReportModeChange,
   onMockAction,
@@ -73,7 +78,14 @@ export function ResearchDocument({
         {summary.blocks.map((block) =>
           renderBlock(block, citationMap, visualsEnabled, reportModes, activeModeId, language, onReportModeChange, onMockAction),
         )}
-        {localBrief ? <LocalBriefSection brief={localBrief} citationMap={citationMap} /> : null}
+        {localBrief ? (
+          <LocalBriefSection
+            brief={localBrief}
+            citationMap={citationMap}
+            onCopyEvidenceCardsMarkdown={onCopyEvidenceCardsMarkdown}
+            onCopyLocalBriefMarkdown={onCopyLocalBriefMarkdown}
+          />
+        ) : null}
       </article>
     </section>
   );
@@ -82,11 +94,16 @@ export function ResearchDocument({
 function LocalBriefSection({
   brief,
   citationMap,
+  onCopyEvidenceCardsMarkdown,
+  onCopyLocalBriefMarkdown,
 }: {
   brief: DeterministicBrief;
   citationMap: Map<string, SummaryDocument["citations"][number]>;
+  onCopyEvidenceCardsMarkdown: () => void;
+  onCopyLocalBriefMarkdown: () => void;
 }) {
   const isPolicyBlocked = brief.generationPolicy?.allowedToDisplay === false;
+  const disabledDescriptionId = `${brief.id}-copy-disabled`;
 
   return (
     <section className="local-brief" aria-label="Local source-grounded brief">
@@ -101,6 +118,31 @@ function LocalBriefSection({
         ) : null}
         {brief.citationAudit ? <CitationAuditStatus audit={brief.citationAudit} /> : null}
         {brief.generationPolicy ? <GenerationPolicyStatus policy={brief.generationPolicy} /> : null}
+        <div className="local-brief__copy-actions" aria-label="Local brief copy actions">
+          <button
+            type="button"
+            disabled={isPolicyBlocked}
+            aria-describedby={isPolicyBlocked ? disabledDescriptionId : undefined}
+            onClick={onCopyLocalBriefMarkdown}
+          >
+            <Copy size={14} aria-hidden="true" />
+            Copy brief Markdown
+          </button>
+          <button
+            type="button"
+            disabled={isPolicyBlocked}
+            aria-describedby={isPolicyBlocked ? disabledDescriptionId : undefined}
+            onClick={onCopyEvidenceCardsMarkdown}
+          >
+            <Files size={14} aria-hidden="true" />
+            Copy evidence Markdown
+          </button>
+        </div>
+        {isPolicyBlocked ? (
+          <p className="local-brief__copy-note" id={disabledDescriptionId}>
+            Copy export unavailable while generation policy blocks display.
+          </p>
+        ) : null}
       </header>
       {brief.warnings.length ? (
         <ul className="local-brief__warnings" aria-label="Local brief warnings">

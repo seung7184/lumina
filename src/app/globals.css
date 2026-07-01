@@ -893,6 +893,44 @@ dd {
   line-height: 1.45;
 }
 
+.local-brief__copy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.local-brief__copy-actions button {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--p-line-strong);
+  border-radius: var(--radius-md);
+  background: var(--p-surface);
+  color: var(--p-ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0 10px;
+}
+
+.local-brief__copy-actions button:not(:disabled):hover {
+  border-color: var(--p-teal);
+  color: var(--p-teal-deep);
+}
+
+.local-brief__copy-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.local-brief__copy-note {
+  color: var(--p-coral-deep);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .local-brief__blocked {
   max-width: 760px;
   border: 1px solid var(--p-coral-line);
