@@ -21,6 +21,7 @@ const sampleVideoId = "511ctokiROU";
 const sampleCanonicalUrl = `https://www.youtube.com/watch?v=${sampleVideoId}`;
 const deterministicFetchedAt = "2026-07-01T00:00:00.000Z";
 const supportedVideoIdPattern = /^[A-Za-z0-9_-]+$/;
+const manualTranscriptProviderId = "manual-transcript";
 
 export interface YouTubeTranscriptProvider {
   id?: string;
@@ -282,11 +283,18 @@ export function buildSourceDocumentFromYouTube(
   sourceMetadata: SourceMetadata,
   segments: NormalizedSourceSegment[],
 ): SourceDocument {
+  return buildSourceDocumentFromMetadata(sourceMetadata, segments);
+}
+
+export function buildSourceDocumentFromMetadata(
+  sourceMetadata: SourceMetadata,
+  segments: NormalizedSourceSegment[],
+): SourceDocument {
   const language = toWorkspaceLanguage(sourceMetadata.language);
 
   return {
     id: sourceMetadata.sourceId,
-    type: "youtube",
+    type: sourceMetadata.kind === "youtube" ? "youtube" : sourceMetadata.kind,
     title: {
       en: sourceMetadata.title,
       ko: sourceMetadata.title,
@@ -360,6 +368,67 @@ export function parseManualTranscriptText(input: ManualTranscriptInput): ParsedM
     });
     return segments;
   }, []);
+}
+
+export function buildManualTranscriptSourceMetadata(input: ManualTranscriptInput): SourceMetadata {
+  const sourceUrl = input.sourceUrl.trim();
+  const parsedYouTubeUrl = tryParseYouTubeUrl(sourceUrl);
+  const providerDescriptor = getProviderDescriptorById(manualTranscriptProviderId);
+  const title = input.title?.trim() || "Manual transcript";
+
+  return {
+    sourceId: parsedYouTubeUrl ? `src-manual-${parsedYouTubeUrl.videoId}` : `src-manual-${buildStableSourceSlug(sourceUrl || title)}`,
+    kind: parsedYouTubeUrl ? "youtube" : "text",
+    title,
+    language: input.language,
+    canonicalUrl: parsedYouTubeUrl?.canonicalUrl ?? sourceUrl,
+    providerId: providerDescriptor.id,
+    providerName: providerDescriptor.name,
+    providerReliability: providerDescriptor.reliability,
+  };
+}
+
+export function buildRawSegmentsFromManualTranscript(
+  segments: ParsedManualTranscriptSegment[],
+): RawTranscriptSegment[] {
+  return segments.map((segment) => ({
+    index: segment.index,
+    startSeconds: segment.startSeconds ?? 0,
+    endSeconds: segment.endSeconds,
+    text: segment.text,
+    language: segment.language,
+  }));
+}
+
+export function ingestManualTranscriptSource(input: ManualTranscriptInput): IngestionResult {
+  const parsedSegments = parseManualTranscriptText(input);
+  const sourceMetadata = buildManualTranscriptSourceMetadata(input);
+  const rawSegments = buildRawSegmentsFromManualTranscript(parsedSegments);
+  const segments = normalizeTranscriptSegments(sourceMetadata, rawSegments).map((segment, index) => {
+    const parsedSegment = parsedSegments[index];
+    const hasTimestamp = parsedSegment?.startSeconds !== undefined;
+    const sourceUrl = hasTimestamp && isYouTubeUrl(sourceMetadata.canonicalUrl)
+      ? buildTimestampUrl(sourceMetadata.canonicalUrl, segment.startSeconds)
+      : sourceMetadata.canonicalUrl;
+
+    return {
+      ...segment,
+      sourceUrl,
+      metadata: {
+        ...segment.metadata,
+        manualTranscript: true,
+        hasTimestamp,
+      },
+    };
+  });
+  const citations = createCitationRefsFromSegments(segments);
+
+  return {
+    sourceMetadata,
+    segments,
+    citations,
+    warnings: buildManualTranscriptWarnings(parsedSegments),
+  };
 }
 
 export async function ingestYouTubeSource(
@@ -512,6 +581,42 @@ function parseTimestampSeconds(value: string) {
   return parts[0] * 60 + parts[1];
 }
 
+function getProviderDescriptorById(providerId: string): TranscriptProviderDescriptor {
+  const providerDescriptor = providerDescriptors.find((descriptor) => descriptor.id === providerId);
+
+  if (!providerDescriptor) {
+    throw new YouTubeIngestionException("PROVIDER_UNAVAILABLE", "Transcript provider metadata is not configured.");
+  }
+
+  return providerDescriptor;
+}
+
+function tryParseYouTubeUrl(url: string): ParsedYouTubeUrl | undefined {
+  if (!url) {
+    return undefined;
+  }
+
+  try {
+    return parseYouTubeUrl(url);
+  } catch {
+    return undefined;
+  }
+}
+
+function isYouTubeUrl(url: string | undefined) {
+  return tryParseYouTubeUrl(url ?? "") !== undefined;
+}
+
+function buildStableSourceSlug(value: string) {
+  const slug = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+
+  return slug || "transcript";
+}
+
 function buildTimestampUrl(canonicalUrl: string | undefined, seconds: number) {
   if (!canonicalUrl) {
     return undefined;
@@ -553,6 +658,35 @@ function buildIngestionWarnings(rawSegments: RawTranscriptSegment[]): IngestionW
       severity: "info",
     });
   }
+
+  return warnings;
+}
+
+function buildManualTranscriptWarnings(segments: ParsedManualTranscriptSegment[]): IngestionWarning[] {
+  const warnings: IngestionWarning[] = [];
+
+  if (segments.length === 0) {
+    warnings.push({
+      code: "EMPTY_TRANSCRIPT",
+      message: "Manual transcript did not contain any usable segments.",
+      severity: "warning",
+    });
+    return warnings;
+  }
+
+  if (segments.every((segment) => segment.startSeconds === undefined)) {
+    warnings.push({
+      code: "MANUAL_TRANSCRIPT_UNTIMESTAMPED",
+      message: "Manual transcript has no timestamps, so citations link to the source URL only.",
+      severity: "info",
+    });
+  }
+
+  warnings.push({
+    code: "TRANSLATION_UNAVAILABLE",
+    message: "Translation is not available for manual transcript segments yet.",
+    severity: "info",
+  });
 
   return warnings;
 }

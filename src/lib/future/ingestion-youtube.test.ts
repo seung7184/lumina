@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildManualTranscriptSourceMetadata,
+  buildRawSegmentsFromManualTranscript,
   MockYouTubeTranscriptProvider,
   createCitationRefsFromSegments,
   createDefaultYouTubeIngestionPipeline,
   formatTimestamp,
   getYouTubeTranscriptProviderById,
+  ingestManualTranscriptSource,
   ingestYouTubeSource,
   isIngestionError,
   listYouTubeTranscriptProviders,
@@ -331,5 +334,116 @@ describe("parseManualTranscriptText", () => {
       { index: 0, startSeconds: 3723, text: "긴 한국어 문장을 그대로 둡니다.", language: "ko" },
       { index: 1, text: "English line", language: "ko" },
     ]);
+  });
+});
+
+describe("manual transcript ingestion", () => {
+  const baseInput: ManualTranscriptInput = {
+    sourceUrl: sampleUrl,
+    title: "Manual fallback source",
+    language: "ko",
+    transcriptText: "[00:12] First manual line\n00:24 - 00:30 Second manual line",
+  };
+
+  it("builds Manual Transcript source metadata without provider calls", () => {
+    expect(buildManualTranscriptSourceMetadata(baseInput)).toMatchObject({
+      sourceId: "src-manual-511ctokiROU",
+      kind: "youtube",
+      title: "Manual fallback source",
+      language: "ko",
+      canonicalUrl: sampleUrl,
+      providerId: "manual-transcript",
+      providerName: "Manual Transcript",
+      providerReliability: "experimental",
+    });
+  });
+
+  it("converts parsed manual transcript segments to raw transcript segments without inventing translations", () => {
+    const parsed = parseManualTranscriptText(baseInput);
+
+    expect(buildRawSegmentsFromManualTranscript(parsed)).toEqual([
+      {
+        index: 0,
+        startSeconds: 12,
+        text: "First manual line",
+        language: "ko",
+      },
+      {
+        index: 1,
+        startSeconds: 24,
+        endSeconds: 30,
+        text: "Second manual line",
+        language: "ko",
+      },
+    ]);
+  });
+
+  it("ingests timestamped manual transcript text with timestamped YouTube citation URLs", () => {
+    const result = ingestManualTranscriptSource(baseInput);
+
+    expect(result.sourceMetadata).toMatchObject({
+      title: "Manual fallback source",
+      providerName: "Manual Transcript",
+      providerReliability: "experimental",
+    });
+    expect(result.segments).toHaveLength(2);
+    expect(result.segments[0]).toMatchObject({
+      id: "seg-src-manual-511ctokiROU-000",
+      startSeconds: 12,
+      displayTime: "00:12",
+      translationText: undefined,
+      sourceUrl: "https://www.youtube.com/watch?v=511ctokiROU&t=12s",
+    });
+    expect(result.citations[1]).toMatchObject({
+      id: "cite-src-manual-511ctokiROU-002",
+      displayTime: "00:24",
+      url: "https://www.youtube.com/watch?v=511ctokiROU&t=24s",
+    });
+    expect(result.warnings).toContainEqual({
+      code: "TRANSLATION_UNAVAILABLE",
+      message: "Translation is not available for manual transcript segments yet.",
+      severity: "info",
+    });
+  });
+
+  it("keeps stable citations and warns when manual transcript text has no timestamps", () => {
+    const result = ingestManualTranscriptSource({
+      ...baseInput,
+      title: undefined,
+      transcriptText: "First paragraph.\n\nSecond paragraph.",
+    });
+
+    expect(result.sourceMetadata.title).toBe("Manual transcript");
+    expect(result.segments.map((segment) => segment.sourceUrl)).toEqual([sampleUrl, sampleUrl]);
+    expect(result.segments.map((segment) => segment.displayTime)).toEqual(["00:00", "00:00"]);
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        {
+          code: "MANUAL_TRANSCRIPT_UNTIMESTAMPED",
+          message: "Manual transcript has no timestamps, so citations link to the source URL only.",
+          severity: "info",
+        },
+        {
+          code: "TRANSLATION_UNAVAILABLE",
+          message: "Translation is not available for manual transcript segments yet.",
+          severity: "info",
+        },
+      ]),
+    );
+  });
+
+  it("returns an empty transcript warning for empty manual transcript input", () => {
+    const result = ingestManualTranscriptSource({
+      ...baseInput,
+      transcriptText: " \n\n ",
+    });
+
+    expect(result.segments).toEqual([]);
+    expect(result.citations).toEqual([]);
+    expect(result.warnings).toContainEqual({
+      code: "EMPTY_TRANSCRIPT",
+      message: "Manual transcript did not contain any usable segments.",
+      severity: "warning",
+    });
   });
 });

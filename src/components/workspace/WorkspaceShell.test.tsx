@@ -98,8 +98,41 @@ describe("WorkspaceShell", () => {
     fireEvent.click(submit);
     expect(
       await within(sourcePanel).findByText(
-        "This source was recognized, but no transcript is available yet. You can paste a manual transcript in a future flow.",
+        "This source was recognized, but no transcript is available yet. You can paste a manual transcript below.",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("loads a pasted manual transcript from the Source tab without regenerating the summary", async () => {
+    render(<WorkspaceShell demo={luminaDemo} />);
+
+    const sourcePanel = screen.getByRole("tabpanel", { name: /Source/i });
+
+    fireEvent.click(within(sourcePanel).getByRole("button", { name: "Paste manual transcript" }));
+    fireEvent.click(within(sourcePanel).getByRole("button", { name: "Use manual transcript" }));
+    expect(await within(sourcePanel).findByText("Paste transcript text first.")).toBeInTheDocument();
+
+    fireEvent.change(within(sourcePanel).getByLabelText("Manual title"), {
+      target: { value: "Manual fallback source" },
+    });
+    fireEvent.change(within(sourcePanel).getByLabelText("Manual language"), {
+      target: { value: "ko" },
+    });
+    fireEvent.change(within(sourcePanel).getByLabelText("Manual transcript text"), {
+      target: {
+        value: "[00:12] First pasted line\n00:24 - 00:30 Second pasted line",
+      },
+    });
+    fireEvent.click(within(sourcePanel).getByRole("button", { name: "Use manual transcript" }));
+
+    expect(
+      await within(sourcePanel).findByText("Ready. Manual Transcript loaded 2 segments with 2 citations."),
+    ).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("Provider: Manual Transcript · experimental reliability")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("Segments: 2")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("Citations: 2")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("Translation is not available for manual transcript segments yet.")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("First pasted line")).toBeInTheDocument();
+    expect(screen.getByText("AI literacy creates widening outcomes")).toBeInTheDocument();
   });
 });

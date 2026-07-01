@@ -1,7 +1,7 @@
 import { Copy, Globe2, Play } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
-import type { SourceDocument, SourceSegment } from "@/lib/types/workspace";
+import type { ManualTranscriptInput, SourceDocument, SourceSegment } from "@/lib/types/workspace";
 import { TranscriptList } from "@/components/context-panel/TranscriptList";
 import { idleSourceIngestionStatus, type SourceIngestionStatus } from "@/components/context-panel/source-ingestion-status";
 
@@ -14,6 +14,7 @@ interface SourceTabProps {
   showTranslation: boolean;
   onActiveSegmentChange: (id: string) => void;
   onIngestSourceUrl?: (url: string) => Promise<SourceIngestionStatus>;
+  onUseManualTranscript?: (input: ManualTranscriptInput) => Promise<SourceIngestionStatus>;
   onMockAction: (message: string) => void;
   onTranslationToggle: () => void;
 }
@@ -27,9 +28,11 @@ export function SourceTab({
   showTranslation,
   onActiveSegmentChange,
   onIngestSourceUrl,
+  onUseManualTranscript,
   onMockAction,
   onTranslationToggle,
 }: SourceTabProps) {
+  const [manualTranscriptOpen, setManualTranscriptOpen] = useState(false);
   const [ingestStatus, setIngestStatus] = useState<SourceIngestionStatus>({
     ...idleSourceIngestionStatus,
     providerName: source.providerName ?? "Mock YouTube Transcript",
@@ -101,6 +104,64 @@ export function SourceTab({
     onMockAction(nextStatus.message ?? nextStatus.label);
   }
 
+  async function handleManualTranscriptSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const transcriptText = String(formData.get("manual-transcript-text") ?? "").trim();
+
+    if (!transcriptText) {
+      const nextStatus: SourceIngestionStatus = {
+        phase: "error",
+        label: "Error",
+        message: "Paste transcript text first.",
+        providerName: "Manual Transcript",
+        providerReliability: "experimental",
+      };
+      setIngestStatus(nextStatus);
+      onMockAction("Paste transcript text first.");
+      return;
+    }
+
+    if (!onUseManualTranscript) {
+      const nextStatus: SourceIngestionStatus = {
+        phase: "error",
+        label: "Error",
+        message: "Manual transcript ingestion is not connected in this view.",
+        providerName: "Manual Transcript",
+        providerReliability: "experimental",
+      };
+      setIngestStatus(nextStatus);
+      onMockAction("Manual transcript ingestion is not connected in this view.");
+      return;
+    }
+
+    const input: ManualTranscriptInput = {
+      sourceUrl: source.url ?? "",
+      title: String(formData.get("manual-title") ?? "").trim(),
+      language: String(formData.get("manual-language") ?? source.sourceLanguage).trim() || source.sourceLanguage,
+      transcriptText,
+    };
+
+    setIngestStatus({
+      phase: "parsing-manual-transcript",
+      label: "Parsing transcript",
+      message: "Parsing pasted transcript text locally.",
+      providerName: "Manual Transcript",
+      providerReliability: "experimental",
+    });
+    setIngestStatus({
+      phase: "normalizing-segments",
+      label: "Normalizing segments",
+      message: "Preparing local manual transcript segments and citations.",
+      providerName: "Manual Transcript",
+      providerReliability: "experimental",
+    });
+
+    const nextStatus = await onUseManualTranscript(input);
+    setIngestStatus(nextStatus);
+    onMockAction(nextStatus.message ?? nextStatus.label);
+  }
+
   const providerLine = ingestStatus.providerName
     ? `Provider: ${ingestStatus.providerName} · ${ingestStatus.providerReliability ?? "demo"} reliability`
     : undefined;
@@ -167,6 +228,54 @@ export function SourceTab({
           </ul>
         ) : null}
       </form>
+      <section className="manual-transcript-panel" aria-label="Manual transcript fallback">
+        <button
+          type="button"
+          className="manual-transcript-toggle"
+          aria-expanded={manualTranscriptOpen}
+          aria-controls={`${panelId}-manual-transcript-form`}
+          onClick={() => {
+            setManualTranscriptOpen((open) => !open);
+            onMockAction(manualTranscriptOpen ? "Manual transcript paste closed." : "Manual transcript paste opened.");
+          }}
+        >
+          Paste manual transcript
+        </button>
+        {manualTranscriptOpen ? (
+          <form
+            className="manual-transcript-form"
+            id={`${panelId}-manual-transcript-form`}
+            noValidate
+            onSubmit={handleManualTranscriptSubmit}
+          >
+            <label htmlFor={`${panelId}-manual-title`}>Manual title</label>
+            <input
+              id={`${panelId}-manual-title`}
+              name="manual-title"
+              type="text"
+              defaultValue={source.title.en}
+              placeholder="Manual transcript"
+            />
+            <label htmlFor={`${panelId}-manual-language`}>Manual language</label>
+            <input
+              id={`${panelId}-manual-language`}
+              name="manual-language"
+              type="text"
+              defaultValue={source.sourceLanguage}
+              inputMode="text"
+            />
+            <label htmlFor={`${panelId}-manual-transcript-text`}>Manual transcript text</label>
+            <textarea
+              id={`${panelId}-manual-transcript-text`}
+              name="manual-transcript-text"
+              rows={5}
+              placeholder="[00:12] Text from the source"
+            />
+            <p>Paste paragraphs or timestamped lines like [00:12] text.</p>
+            <button type="submit">Use manual transcript</button>
+          </form>
+        ) : null}
+      </section>
       <div className="transcript-head">
         <strong>Transcript</strong>
         <span>{segments.length} segments</span>
