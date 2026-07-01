@@ -2,6 +2,8 @@ export type LanguageCode = "en" | "ko";
 
 export type SourceType = "youtube" | "pdf" | "webpage" | "audio" | "video" | "text";
 
+export type SourceKind = "youtube" | "pdf" | "webpage" | "text";
+
 export type GroundingStatus = "from_source" | "ai_inferred" | "needs_verification";
 
 export type ReportModeId =
@@ -31,6 +33,7 @@ export interface SourceDocument {
   durationSeconds?: number;
   sourceLanguage: LanguageCode;
   thumbnailLabel: string;
+  providerName?: string;
   segmentIds: string[];
 }
 
@@ -54,6 +57,106 @@ export interface CitationRef {
   segmentIds: string[];
   label: string;
   status: GroundingStatus;
+}
+
+export interface IngestionSourceInput {
+  kind: SourceKind;
+  url?: string;
+  text?: string;
+  fileName?: string;
+  languageHint?: string;
+}
+
+export interface YouTubeSourceInput extends IngestionSourceInput {
+  kind: "youtube";
+  url: string;
+}
+
+export interface ParsedYouTubeUrl {
+  videoId: string;
+  canonicalUrl: string;
+  originalUrl: string;
+}
+
+export interface SourceMetadata {
+  sourceId: string;
+  kind: SourceKind;
+  title: string;
+  creator?: string;
+  publishedAt?: string;
+  durationSeconds?: number;
+  language?: string;
+  canonicalUrl?: string;
+  thumbnailUrl?: string;
+}
+
+export interface RawTranscriptSegment {
+  index: number;
+  startSeconds: number;
+  endSeconds?: number;
+  text: string;
+  language: string;
+  translationText?: string;
+  speaker?: string;
+  confidence?: number;
+}
+
+export interface NormalizedSourceSegment {
+  id: string;
+  sourceId: string;
+  index: number;
+  startSeconds: number;
+  endSeconds?: number;
+  displayTime: string;
+  text: string;
+  language: string;
+  translationText?: string;
+  speaker?: string;
+  confidence?: number;
+  citationId: string;
+  sourceUrl?: string;
+  metadata?: Record<string, string | number | boolean | null>;
+}
+
+export interface SegmentCitationRef {
+  id: string;
+  sourceId: string;
+  segmentId: string;
+  label: string;
+  displayTime: string;
+  url?: string;
+}
+
+export interface TranscriptFetchResult {
+  sourceMetadata: SourceMetadata;
+  rawSegments: RawTranscriptSegment[];
+  provider: string;
+  fetchedAt: string;
+}
+
+export interface IngestionWarning {
+  code: string;
+  message: string;
+  severity: "info" | "warning" | "error";
+}
+
+export interface IngestionResult {
+  sourceMetadata: SourceMetadata;
+  segments: NormalizedSourceSegment[];
+  citations: SegmentCitationRef[];
+  warnings: IngestionWarning[];
+}
+
+export interface IngestionError {
+  code:
+    | "INVALID_URL"
+    | "UNSUPPORTED_SOURCE"
+    | "TRANSCRIPT_UNAVAILABLE"
+    | "PROVIDER_UNAVAILABLE"
+    | "EMPTY_TRANSCRIPT"
+    | "UNKNOWN_ERROR";
+  message: string;
+  recoverable: boolean;
 }
 
 export interface BaseBlock {

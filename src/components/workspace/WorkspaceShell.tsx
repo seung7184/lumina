@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   AssistantMessage,
+  CitationRef,
   ExportOptions,
   LanguageCode,
   LuminaDemoWorkspace,
@@ -13,6 +14,13 @@ import { ContextPanel } from "@/components/context-panel/ContextPanel";
 import { DocumentToolbar } from "@/components/workspace/DocumentToolbar";
 import { ResearchDocument } from "@/components/workspace/ResearchDocument";
 import { WorkspaceSidebar } from "@/components/workspace/WorkspaceSidebar";
+import {
+  buildSourceDocumentFromYouTube,
+  buildWorkspaceCitationRefsFromSegments,
+  buildWorkspaceSegmentsFromNormalized,
+  ingestYouTubeSource,
+  isIngestionError,
+} from "@/lib/future/ingestion-youtube";
 
 interface WorkspaceShellProps {
   demo: LuminaDemoWorkspace;
@@ -30,6 +38,7 @@ const initialExportOptions: ExportOptions = {
 };
 
 export function WorkspaceShell({ demo }: WorkspaceShellProps) {
+  const [workspace, setWorkspace] = useState<LuminaDemoWorkspace>(demo);
   const [language, setLanguage] = useState<LanguageCode>("en");
   const [contextTab, setContextTab] = useState<"source" | "assistant" | "highlight">("source");
   const [toolbarMode, setToolbarMode] = useState<"summary" | "expand">("summary");
@@ -52,8 +61,8 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
   const contextDrawerCloseRef = useRef<HTMLButtonElement>(null);
   const contextTriggerRef = useRef<HTMLButtonElement | null>(null);
 
-  const summary = demo.summaries[language];
-  const assistantMessages = [...demo.assistantMessages, ...localAssistantMessages];
+  const summary = workspace.summaries[language];
+  const assistantMessages = [...workspace.assistantMessages, ...localAssistantMessages];
 
   const closeContextDrawer = useCallback(() => {
     setContextDrawerOpen(false);
@@ -122,7 +131,7 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
   }
 
   function handlePromptSelect(promptId: string) {
-    const prompt = demo.assistantPrompts.find((item) => item.id === promptId);
+    const prompt = workspace.assistantPrompts.find((item) => item.id === promptId);
     if (!prompt) {
       return;
     }
@@ -166,13 +175,46 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
     announce("Mock assistant response added with source citations.");
   }
 
+  async function handleIngestSourceUrl(url: string) {
+    try {
+      const result = await ingestYouTubeSource({ kind: "youtube", url });
+      const source = buildSourceDocumentFromYouTube(result.sourceMetadata, result.segments);
+      const segments = buildWorkspaceSegmentsFromNormalized(result.segments);
+      const citations = buildWorkspaceCitationRefsFromSegments(result.segments);
+
+      setWorkspace((current) => ({
+        ...current,
+        source,
+        segments,
+        summaries: {
+          en: {
+            ...current.summaries.en,
+            sourceId: source.id,
+            citations: mergeCitationRefs(current.summaries.en.citations, citations),
+          },
+          ko: {
+            ...current.summaries.ko,
+            sourceId: source.id,
+            citations: mergeCitationRefs(current.summaries.ko.citations, citations),
+          },
+        },
+      }));
+      setActiveSegmentId(segments[0]?.id ?? "");
+      setContextTab("source");
+
+      return `Mock YouTube ingestion loaded ${segments.length} segments.`;
+    } catch (error) {
+      return isIngestionError(error) ? error.message : "Mock YouTube ingestion failed.";
+    }
+  }
+
   return (
     <div className={`workspace-shell ${sidebarCollapsed ? "is-sidebar-collapsed" : ""}`} data-theme="dart">
       <WorkspaceSidebar
         activeModeId={activeModeId}
         collapsed={sidebarCollapsed}
         language={language}
-        reportModes={demo.reportModes}
+        reportModes={workspace.reportModes}
         onMockAction={announce}
         onModeChange={setActiveModeId}
         onToggleCollapse={() => {
@@ -201,8 +243,8 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
         <ResearchDocument
           activeModeId={activeModeId}
           language={language}
-          reportModes={demo.reportModes}
-          source={demo.source}
+          reportModes={workspace.reportModes}
+          source={workspace.source}
           summary={summary}
           visualsEnabled={visualsEnabled}
           onLanguageChange={setLanguage}
@@ -215,14 +257,15 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
         activeTab={contextTab}
         assistantDraft={assistantDraft}
         assistantMessages={assistantMessages}
-        assistantPrompts={demo.assistantPrompts}
+        assistantPrompts={workspace.assistantPrompts}
         assistantScope={assistantScope}
-        highlights={demo.highlights}
+        highlights={workspace.highlights}
         responseMode={responseMode}
-        segments={demo.segments}
+        segments={workspace.segments}
         showTranslation={showTranslation}
-        source={demo.source}
+        source={workspace.source}
         onActiveSegmentChange={setActiveSegmentId}
+        onIngestSourceUrl={handleIngestSourceUrl}
         onAssistantScopeChange={setAssistantScope}
         onAssistantDraftChange={setAssistantDraft}
         onAssistantSend={handleAssistantSend}
@@ -268,15 +311,16 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
               assistantComposerId="assistant-draft-drawer"
               assistantDraft={assistantDraft}
               assistantMessages={assistantMessages}
-              assistantPrompts={demo.assistantPrompts}
+              assistantPrompts={workspace.assistantPrompts}
               assistantScope={assistantScope}
-              highlights={demo.highlights}
+              highlights={workspace.highlights}
               idBase="context-drawer"
               responseMode={responseMode}
-              segments={demo.segments}
+              segments={workspace.segments}
               showTranslation={showTranslation}
-              source={demo.source}
+              source={workspace.source}
               onActiveSegmentChange={setActiveSegmentId}
+              onIngestSourceUrl={handleIngestSourceUrl}
               onAssistantScopeChange={setAssistantScope}
               onAssistantDraftChange={setAssistantDraft}
               onAssistantSend={handleAssistantSend}
@@ -294,4 +338,10 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
       </div>
     </div>
   );
+}
+
+function mergeCitationRefs(existing: CitationRef[], incoming: CitationRef[]) {
+  const citationMap = new Map(existing.map((citation) => [citation.id, citation]));
+  incoming.forEach((citation) => citationMap.set(citation.id, citation));
+  return Array.from(citationMap.values());
 }

@@ -1293,6 +1293,56 @@ dd {
   font-size: 13px;
 }
 
+.source-ingest-form {
+  display: grid;
+  gap: 7px;
+  margin-top: 14px;
+  border-bottom: 1px solid var(--p-line);
+  padding-bottom: 14px;
+}
+
+.source-ingest-form label {
+  color: var(--p-text-faint);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.source-ingest-form div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.source-ingest-form input {
+  min-width: 0;
+  border: 1px solid var(--p-line);
+  border-radius: var(--radius-md);
+  background: var(--p-paper-deep);
+  color: var(--p-ink);
+  font-size: 12px;
+  padding: 9px 10px;
+}
+
+.source-ingest-form button {
+  border: 1px solid var(--p-line-strong);
+  border-radius: var(--radius-md);
+  background: var(--p-surface-raised);
+  color: var(--p-ink);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0 10px;
+}
+
+.source-ingest-form span,
+.source-ingest-form p {
+  margin: 0;
+  color: var(--p-text-faint);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+}
+
 .transcript-head,
 .toggle-row {
   display: flex;
