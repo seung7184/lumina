@@ -5,6 +5,7 @@ import type {
   DeterministicBrief,
   ManualTranscriptInput,
   PdfSourceInput,
+  ResearchCollection,
   SourceDocument,
   SourceSegment,
   WebpageSourceInput,
@@ -22,6 +23,7 @@ interface SourceTabProps {
   source: SourceDocument;
   segments: SourceSegment[];
   localBrief: DeterministicBrief | null;
+  researchCollection: ResearchCollection;
   activeSegmentId: string;
   labelledBy: string;
   panelId: string;
@@ -39,6 +41,7 @@ export function SourceTab({
   source,
   segments,
   localBrief,
+  researchCollection,
   activeSegmentId,
   labelledBy,
   panelId,
@@ -314,6 +317,32 @@ export function SourceTab({
           ))}
         </ul>
       </section>
+      <section className="collection-boundary-panel" aria-label="Source collection boundary">
+        <div>
+          <strong>Source collection boundary</strong>
+          <p>{formatCollectionBoundary(researchCollection)}</p>
+        </div>
+        <ul>
+          {researchCollection.sources.map((item) => (
+            <li className={item.isActive ? "is-active" : ""} key={item.id}>
+              <span>
+                {item.title}
+                {item.isActive ? " · active source" : ""}
+              </span>
+              <small>
+                {item.providerName ?? item.type} · {item.segmentCount} segments · {item.citationCount} citations
+              </small>
+            </li>
+          ))}
+        </ul>
+        {localBrief?.sourceBinding ? (
+          <p className="collection-boundary-panel__binding">
+            Local brief binding: active source only · {localBrief.sourceBinding.activeSourceId}
+          </p>
+        ) : (
+          <p className="collection-boundary-panel__binding">Local brief binding: pending</p>
+        )}
+      </section>
       <form className="source-ingest-form" noValidate onSubmit={handleSubmit}>
         <label htmlFor={`${panelId}-source-url`}>Try source URL</label>
         <div className="source-ingest-row">
@@ -496,6 +525,14 @@ function PipelineStatusRow({ stage }: { stage: PipelineStageStatus }) {
       </span>
     </li>
   );
+}
+
+function formatCollectionBoundary(collection: ResearchCollection) {
+  if (collection.sourceCount === 1) {
+    return "Single source reference · no cross-source synthesis";
+  }
+
+  return `${collection.sourceCount} source references · active-source-only generation · no cross-source synthesis`;
 }
 
 function ProviderCatalogGroup({

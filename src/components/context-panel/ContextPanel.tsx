@@ -5,6 +5,7 @@ import type {
   HighlightItem,
   ManualTranscriptInput,
   PdfSourceInput,
+  ResearchCollection,
   SourceDocument,
   SourceSegment,
   WebpageSourceInput,
@@ -26,6 +27,7 @@ interface ContextPanelProps {
   activeSegmentId: string;
   showTranslation: boolean;
   localBrief: DeterministicBrief | null;
+  researchCollection: ResearchCollection;
   assistantMessages: AssistantMessage[];
   assistantPrompts: AssistantPrompt[];
   assistantDraft: string;
@@ -56,6 +58,7 @@ export function ContextPanel({
   activeSegmentId,
   showTranslation,
   localBrief,
+  researchCollection,
   assistantMessages,
   assistantPrompts,
   assistantDraft,
@@ -130,6 +133,7 @@ export function ContextPanel({
           showTranslation={showTranslation}
           source={source}
           localBrief={localBrief}
+          researchCollection={researchCollection}
           onActiveSegmentChange={onActiveSegmentChange}
           onIngestSourceUrl={onIngestSourceUrl}
           onUseManualTranscript={onUseManualTranscript}

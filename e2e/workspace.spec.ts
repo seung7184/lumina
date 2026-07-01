@@ -130,11 +130,14 @@ test("desktop workspace generates and resets a local deterministic brief", async
 
   const sourcePanel = page.getByRole("tabpanel", { name: "Source" });
   const pipeline = sourcePanel.getByRole("region", { name: "Source-grounded pipeline status" });
+  const collectionBoundary = sourcePanel.getByRole("region", { name: "Source collection boundary" });
   await expect(pipeline.getByText("Source provider → Generation provider → Citation audit → Policy gate")).toBeVisible();
   await expect(pipeline.getByText("Source: Mock YouTube Transcript · demo")).toBeVisible();
   await expect(pipeline.getByText("Generation: not generated yet")).toBeVisible();
   await expect(pipeline.getByText("Citation audit: pending")).toBeVisible();
   await expect(pipeline.getByText("Policy gate: pending")).toBeVisible();
+  await expect(collectionBoundary.getByText("Single source reference · no cross-source synthesis")).toBeVisible();
+  await expect(collectionBoundary.getByText("Local brief binding: pending")).toBeVisible();
 
   await page.getByRole("button", { name: "Generate local brief" }).click();
   const brief = page.getByRole("region", { name: "Local source-grounded brief" });
@@ -151,6 +154,7 @@ test("desktop workspace generates and resets a local deterministic brief", async
   await expect(pipeline.getByText("Generation: Local Deterministic Brief · demo")).toBeVisible();
   await expect(pipeline.getByText("Citation audit: passed")).toBeVisible();
   await expect(pipeline.getByText("Policy gate: allowed")).toBeVisible();
+  await expect(collectionBoundary.getByText("Local brief binding: active source only · src-youtube-511ctokiroU")).toBeVisible();
   await expect(page.getByText(/AI confidence/i)).toHaveCount(0);
 
   await sourcePanel.getByLabel("Mock webpage URL").fill("https://example.com/articles/local-brief-reset");
@@ -162,6 +166,9 @@ test("desktop workspace generates and resets a local deterministic brief", async
   await expect(pipeline.getByText("Generation: not generated yet")).toBeVisible();
   await expect(pipeline.getByText("Citation audit: pending")).toBeVisible();
   await expect(pipeline.getByText("Policy gate: pending")).toBeVisible();
+  await expect(collectionBoundary.getByText("2 source references · active-source-only generation · no cross-source synthesis")).toBeVisible();
+  await expect(collectionBoundary.getByText("Local Brief Reset · active source")).toBeVisible();
+  await expect(collectionBoundary.getByText("Local brief binding: pending")).toBeVisible();
 
   await page.getByRole("button", { name: "Generate local brief" }).click();
   const regeneratedBrief = page.getByRole("region", { name: "Local source-grounded brief" });
@@ -172,6 +179,9 @@ test("desktop workspace generates and resets a local deterministic brief", async
   await expect(regeneratedBrief.getByText("Citation audit: passed · 0 errors · 0 warnings")).toBeVisible();
   await expect(regeneratedBrief.getByText("Generation policy: allowed · source-grounded display enabled")).toBeVisible();
   await expect(regeneratedBrief.getByRole("link", { name: "Citation 1" }).first()).toBeVisible();
+  await expect(
+    collectionBoundary.getByText("Local brief binding: active source only · src-webpage-example-com-articles-local-brief-reset"),
+  ).toBeVisible();
 
   await sourcePanel.getByLabel("Mock PDF filename").fill("lumina-boundary.pdf");
   await sourcePanel.getByRole("button", { name: "Use mock PDF" }).click();
