@@ -4,7 +4,9 @@ import type {
   IngestionResult,
   IngestionWarning,
   LanguageCode,
+  ManualTranscriptInput,
   NormalizedSourceSegment,
+  ParsedManualTranscriptSegment,
   ParsedYouTubeUrl,
   RawTranscriptSegment,
   SegmentCitationRef,
@@ -21,6 +23,7 @@ const deterministicFetchedAt = "2026-07-01T00:00:00.000Z";
 const supportedVideoIdPattern = /^[A-Za-z0-9_-]+$/;
 
 export interface YouTubeTranscriptProvider {
+  id?: string;
   name: string;
   fetchTranscript(input: YouTubeSourceInput): Promise<TranscriptFetchResult>;
 }
@@ -28,6 +31,75 @@ export interface YouTubeTranscriptProvider {
 export interface YouTubeIngestionOptions {
   provider?: YouTubeTranscriptProvider;
 }
+
+export type TranscriptProviderCapability =
+  | "mock"
+  | "official-captions"
+  | "third-party"
+  | "manual-transcript"
+  | "audio-transcription-fallback";
+
+export interface TranscriptProviderDescriptor {
+  id: string;
+  name: string;
+  capabilities: TranscriptProviderCapability[];
+  requiresNetwork: boolean;
+  requiresApiKey: boolean;
+  supportsLanguageDetection: boolean;
+  supportsTranslation: boolean;
+  reliability: "demo" | "experimental" | "production";
+}
+
+export interface TranscriptProviderSelection {
+  providerId: string;
+  reason: string;
+  fallbackProviderIds: string[];
+}
+
+const mockProviderDescriptor: TranscriptProviderDescriptor = {
+  id: "mock-youtube-transcript",
+  name: "Mock YouTube Transcript",
+  capabilities: ["mock"],
+  requiresNetwork: false,
+  requiresApiKey: false,
+  supportsLanguageDetection: false,
+  supportsTranslation: true,
+  reliability: "demo",
+};
+
+const providerDescriptors: TranscriptProviderDescriptor[] = [
+  mockProviderDescriptor,
+  {
+    id: "future-youtube-captions",
+    name: "Future YouTube Captions",
+    capabilities: ["official-captions"],
+    requiresNetwork: true,
+    requiresApiKey: true,
+    supportsLanguageDetection: true,
+    supportsTranslation: false,
+    reliability: "experimental",
+  },
+  {
+    id: "manual-transcript",
+    name: "Manual Transcript",
+    capabilities: ["manual-transcript"],
+    requiresNetwork: false,
+    requiresApiKey: false,
+    supportsLanguageDetection: false,
+    supportsTranslation: false,
+    reliability: "experimental",
+  },
+  {
+    id: "audio-transcription-fallback",
+    name: "Audio Transcription Fallback",
+    capabilities: ["audio-transcription-fallback"],
+    requiresNetwork: true,
+    requiresApiKey: true,
+    supportsLanguageDetection: true,
+    supportsTranslation: false,
+    reliability: "experimental",
+  },
+];
 
 export class YouTubeIngestionException extends Error implements IngestionError {
   code: IngestionError["code"];
@@ -48,6 +120,67 @@ export function isIngestionError(error: unknown): error is IngestionError {
     "code" in error &&
     "message" in error &&
     "recoverable" in error
+  );
+}
+
+export function listYouTubeTranscriptProviders(): TranscriptProviderDescriptor[] {
+  return providerDescriptors.map((provider) => ({
+    ...provider,
+    capabilities: [...provider.capabilities],
+  }));
+}
+
+export function getYouTubeTranscriptProviderById(providerId: string): YouTubeTranscriptProvider | undefined {
+  if (providerId === mockProviderDescriptor.id) {
+    return new MockYouTubeTranscriptProvider();
+  }
+
+  if (providerId === "future-youtube-captions") {
+    return new FutureYouTubeCaptionProvider();
+  }
+
+  return undefined;
+}
+
+export function selectYouTubeTranscriptProvider(_input: YouTubeSourceInput): TranscriptProviderSelection {
+  void _input;
+  return {
+    providerId: mockProviderDescriptor.id,
+    reason: "Defaulting to the local deterministic mock provider until approved caption providers are configured.",
+    fallbackProviderIds: ["manual-transcript", "audio-transcription-fallback"],
+  };
+}
+
+export function createDefaultYouTubeIngestionPipeline(): {
+  provider: YouTubeTranscriptProvider;
+  selection: TranscriptProviderSelection;
+} {
+  const selection = selectYouTubeTranscriptProvider({ kind: "youtube", url: sampleCanonicalUrl });
+  const provider = getYouTubeTranscriptProviderById(selection.providerId);
+
+  if (!provider) {
+    throw new YouTubeIngestionException("PROVIDER_UNAVAILABLE", "No YouTube transcript provider is configured.");
+  }
+
+  return {
+    provider,
+    selection,
+  };
+}
+
+function getProviderDescriptor(provider: YouTubeTranscriptProvider): TranscriptProviderDescriptor {
+  const providerId = provider.id ?? (provider.name === mockProviderDescriptor.name ? mockProviderDescriptor.id : provider.name);
+  return (
+    providerDescriptors.find((descriptor) => descriptor.id === providerId || descriptor.name === provider.name) ?? {
+      id: providerId,
+      name: provider.name,
+      capabilities: [],
+      requiresNetwork: false,
+      requiresApiKey: false,
+      supportsLanguageDetection: false,
+      supportsTranslation: false,
+      reliability: "experimental",
+    }
   );
 }
 
@@ -164,6 +297,8 @@ export function buildSourceDocumentFromYouTube(
     durationSeconds: sourceMetadata.durationSeconds,
     sourceLanguage: language,
     thumbnailLabel: sourceMetadata.title,
+    providerName: sourceMetadata.providerName,
+    providerReliability: sourceMetadata.providerReliability,
     segmentIds: segments.map((segment) => segment.id),
   };
 }
@@ -194,6 +329,39 @@ export function buildWorkspaceCitationRefsFromSegments(segments: NormalizedSourc
   }));
 }
 
+export function parseManualTranscriptText(input: ManualTranscriptInput): ParsedManualTranscriptSegment[] {
+  const lines = input.transcriptText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const containsTimestamp = lines.some((line) => parseTimestampedLine(line).hasTimestamp);
+  const chunks = containsTimestamp
+    ? lines
+    : input.transcriptText
+        .split(/\r?\n\s*\r?\n/)
+        .map((paragraph) => paragraph.trim().replace(/\s*\r?\n\s*/g, " "))
+        .filter(Boolean);
+
+  return chunks.reduce<ParsedManualTranscriptSegment[]>((segments, chunk) => {
+    const parsed = parseTimestampedLine(chunk);
+    const text = parsed.text.trim();
+
+    if (!text) {
+      return segments;
+    }
+
+    segments.push({
+      index: segments.length,
+      startSeconds: parsed.startSeconds,
+      endSeconds: parsed.endSeconds,
+      text,
+      language: input.language,
+    });
+    return segments;
+  }, []);
+}
+
 export async function ingestYouTubeSource(
   input: YouTubeSourceInput,
   options: YouTubeIngestionOptions = {},
@@ -203,12 +371,16 @@ export async function ingestYouTubeSource(
   }
 
   const parsedUrl = parseYouTubeUrl(input.url);
-  const provider = options.provider ?? new MockYouTubeTranscriptProvider();
+  const pipeline = options.provider
+    ? { provider: options.provider, selection: undefined }
+    : createDefaultYouTubeIngestionPipeline();
+  const provider = pipeline.provider;
 
   if (!provider) {
     throw new YouTubeIngestionException("PROVIDER_UNAVAILABLE", "No YouTube transcript provider is configured.");
   }
 
+  const providerDescriptor = getProviderDescriptor(provider);
   const fetchResult = await provider.fetchTranscript({
     ...input,
     url: parsedUrl.canonicalUrl,
@@ -218,6 +390,9 @@ export async function ingestYouTubeSource(
     ...fetchResult.sourceMetadata,
     sourceId: fetchResult.sourceMetadata.sourceId || `src-youtube-${parsedUrl.videoId}`,
     canonicalUrl: fetchResult.sourceMetadata.canonicalUrl ?? parsedUrl.canonicalUrl,
+    providerId: providerDescriptor.id,
+    providerName: providerDescriptor.name,
+    providerReliability: providerDescriptor.reliability,
   };
   const segments = normalizeTranscriptSegments(sourceMetadata, fetchResult.rawSegments);
   const citations = createCitationRefsFromSegments(segments);
@@ -231,7 +406,8 @@ export async function ingestYouTubeSource(
 }
 
 export class MockYouTubeTranscriptProvider implements YouTubeTranscriptProvider {
-  name = "mock-youtube-transcript";
+  id = mockProviderDescriptor.id;
+  name = mockProviderDescriptor.name;
 
   async fetchTranscript(input: YouTubeSourceInput): Promise<TranscriptFetchResult> {
     const parsedUrl = parseYouTubeUrl(input.url);
@@ -256,14 +432,15 @@ export class MockYouTubeTranscriptProvider implements YouTubeTranscriptProvider 
         thumbnailUrl: `https://i.ytimg.com/vi/${sampleVideoId}/hqdefault.jpg`,
       },
       rawSegments: mockRawSegments,
-      provider: this.name,
+      provider: this.id,
       fetchedAt: deterministicFetchedAt,
     };
   }
 }
 
 export class FutureYouTubeCaptionProvider implements YouTubeTranscriptProvider {
-  name = "future-youtube-caption-provider";
+  id = "future-youtube-captions";
+  name = "Future YouTube Captions";
 
   async fetchTranscript(_input: YouTubeSourceInput): Promise<TranscriptFetchResult> {
     void _input;
@@ -279,6 +456,60 @@ export class FutureYouTubeCaptionProvider implements YouTubeTranscriptProvider {
 
 function firstPathPart(pathname: string) {
   return pathname.split("/").filter(Boolean)[0] ?? null;
+}
+
+function parseTimestampedLine(line: string): {
+  hasTimestamp: boolean;
+  startSeconds?: number;
+  endSeconds?: number;
+  text: string;
+} {
+  const timestampPattern = "\\d{1,2}:\\d{2}(?::\\d{2})?";
+  const rangeMatch = line.match(new RegExp(`^\\[?(${timestampPattern})\\]?\\s*-\\s*\\[?(${timestampPattern})\\]?\\s+(.+)$`));
+
+  if (rangeMatch) {
+    return {
+      hasTimestamp: true,
+      startSeconds: parseTimestampSeconds(rangeMatch[1]),
+      endSeconds: parseTimestampSeconds(rangeMatch[2]),
+      text: rangeMatch[3],
+    };
+  }
+
+  const bracketMatch = line.match(new RegExp(`^\\[(${timestampPattern})\\]\\s*(.*)$`));
+
+  if (bracketMatch) {
+    return {
+      hasTimestamp: true,
+      startSeconds: parseTimestampSeconds(bracketMatch[1]),
+      text: bracketMatch[2],
+    };
+  }
+
+  const prefixMatch = line.match(new RegExp(`^(${timestampPattern})\\s+(.+)$`));
+
+  if (prefixMatch) {
+    return {
+      hasTimestamp: true,
+      startSeconds: parseTimestampSeconds(prefixMatch[1]),
+      text: prefixMatch[2],
+    };
+  }
+
+  return {
+    hasTimestamp: false,
+    text: line,
+  };
+}
+
+function parseTimestampSeconds(value: string) {
+  const parts = value.split(":").map((part) => Number.parseInt(part, 10));
+
+  if (parts.length === 3) {
+    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  }
+
+  return parts[0] * 60 + parts[1];
 }
 
 function buildTimestampUrl(canonicalUrl: string | undefined, seconds: number) {

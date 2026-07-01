@@ -61,8 +61,13 @@ describe("WorkspaceShell", () => {
     fireEvent.change(sourceInput, { target: { value: "https://youtu.be/511ctokiROU?t=123s" } });
     fireEvent.click(within(sourcePanel).getByRole("button", { name: "Ingest source URL" }));
 
-    expect(await within(sourcePanel).findByText("Mock YouTube ingestion loaded 7 segments.")).toBeInTheDocument();
-    expect(within(sourcePanel).getByText("mock-youtube-transcript")).toBeInTheDocument();
+    expect(
+      await within(sourcePanel).findByText("Ready. Mock YouTube Transcript loaded 7 segments with 7 citations."),
+    ).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("Provider: Mock YouTube Transcript · demo reliability")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("Segments: 7")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("Citations: 7")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("Translation is not available for every segment yet.")).toBeInTheDocument();
   });
 
   it("shows calm Source-tab feedback for unsupported ingestion URLs", async () => {
@@ -75,6 +80,26 @@ describe("WorkspaceShell", () => {
     });
     fireEvent.click(within(sourcePanel).getByRole("button", { name: "Ingest source URL" }));
 
-    expect(await within(sourcePanel).findByText("Only YouTube URLs are supported.")).toBeInTheDocument();
+    expect(await within(sourcePanel).findByText("Only YouTube URLs are supported in this ingestion slice.")).toBeInTheDocument();
+  });
+
+  it("shows calm Source-tab feedback for invalid and unavailable transcripts", async () => {
+    render(<WorkspaceShell demo={luminaDemo} />);
+
+    const sourcePanel = screen.getByRole("tabpanel", { name: /Source/i });
+    const sourceInput = within(sourcePanel).getByLabelText("Try source URL");
+    const submit = within(sourcePanel).getByRole("button", { name: "Ingest source URL" });
+
+    fireEvent.change(sourceInput, { target: { value: "not a url" } });
+    fireEvent.click(submit);
+    expect(await within(sourcePanel).findByText("Enter a valid YouTube URL.")).toBeInTheDocument();
+
+    fireEvent.change(sourceInput, { target: { value: "https://www.youtube.com/watch?v=notTheSample" } });
+    fireEvent.click(submit);
+    expect(
+      await within(sourcePanel).findByText(
+        "This source was recognized, but no transcript is available yet. You can paste a manual transcript in a future flow.",
+      ),
+    ).toBeInTheDocument();
   });
 });

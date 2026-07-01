@@ -2,14 +2,19 @@ import { describe, expect, it } from "vitest";
 import {
   MockYouTubeTranscriptProvider,
   createCitationRefsFromSegments,
+  createDefaultYouTubeIngestionPipeline,
   formatTimestamp,
+  getYouTubeTranscriptProviderById,
   ingestYouTubeSource,
   isIngestionError,
+  listYouTubeTranscriptProviders,
   normalizeTranscriptSegments,
+  parseManualTranscriptText,
   parseYouTubeUrl,
   secondsToDisplayTime,
+  selectYouTubeTranscriptProvider,
 } from "@/lib/future/ingestion-youtube";
-import type { RawTranscriptSegment, SourceMetadata } from "@/lib/types/workspace";
+import type { ManualTranscriptInput, RawTranscriptSegment, SourceMetadata } from "@/lib/types/workspace";
 
 const sampleUrl = "https://www.youtube.com/watch?v=511ctokiROU";
 
@@ -211,5 +216,120 @@ describe("MockYouTubeTranscriptProvider", () => {
       message: "Some transcript segments do not include translated text.",
       severity: "info",
     });
+  });
+});
+
+describe("YouTube transcript provider registry", () => {
+  it("lists the mock provider and future placeholders without selecting real providers", () => {
+    const providers = listYouTubeTranscriptProviders();
+
+    expect(providers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "mock-youtube-transcript",
+          name: "Mock YouTube Transcript",
+          capabilities: ["mock"],
+          requiresNetwork: false,
+          requiresApiKey: false,
+          reliability: "demo",
+        }),
+        expect.objectContaining({
+          id: "future-youtube-captions",
+          capabilities: expect.arrayContaining(["official-captions"]),
+          requiresNetwork: true,
+          reliability: "experimental",
+        }),
+      ]),
+    );
+  });
+
+  it("selects the local mock provider by default with fallback metadata", () => {
+    const selection = selectYouTubeTranscriptProvider({ kind: "youtube", url: sampleUrl });
+
+    expect(selection).toEqual({
+      providerId: "mock-youtube-transcript",
+      reason: "Defaulting to the local deterministic mock provider until approved caption providers are configured.",
+      fallbackProviderIds: ["manual-transcript", "audio-transcription-fallback"],
+    });
+  });
+
+  it("resolves known providers and leaves unknown provider IDs undefined", async () => {
+    const provider = getYouTubeTranscriptProviderById("mock-youtube-transcript");
+
+    expect(provider?.name).toBe("Mock YouTube Transcript");
+    await expect(provider?.fetchTranscript({ kind: "youtube", url: sampleUrl })).resolves.toMatchObject({
+      provider: "mock-youtube-transcript",
+    });
+    expect(getYouTubeTranscriptProviderById("missing-provider")).toBeUndefined();
+  });
+
+  it("creates a default mock ingestion pipeline with selection metadata", async () => {
+    const pipeline = createDefaultYouTubeIngestionPipeline();
+    const result = await ingestYouTubeSource({ kind: "youtube", url: sampleUrl });
+
+    expect(pipeline.provider.name).toBe("Mock YouTube Transcript");
+    expect(pipeline.selection.providerId).toBe("mock-youtube-transcript");
+    expect(result.sourceMetadata).toMatchObject({
+      providerId: "mock-youtube-transcript",
+      providerName: "Mock YouTube Transcript",
+      providerReliability: "demo",
+    });
+  });
+});
+
+describe("parseManualTranscriptText", () => {
+  const baseInput: ManualTranscriptInput = {
+    sourceUrl: sampleUrl,
+    title: "Manual paste",
+    language: "ko",
+    transcriptText: "",
+  };
+
+  it("parses plain paragraphs as ordered untimestamped segments", () => {
+    expect(
+      parseManualTranscriptText({
+        ...baseInput,
+        transcriptText: "First paragraph.\n\nSecond paragraph.",
+      }),
+    ).toEqual([
+      { index: 0, text: "First paragraph.", language: "ko" },
+      { index: 1, text: "Second paragraph.", language: "ko" },
+    ]);
+  });
+
+  it("parses bracketed timestamp prefixes", () => {
+    expect(
+      parseManualTranscriptText({
+        ...baseInput,
+        transcriptText: "[00:12] This is the first line\n[01:04] This is the second line",
+      }),
+    ).toEqual([
+      { index: 0, startSeconds: 12, text: "This is the first line", language: "ko" },
+      { index: 1, startSeconds: 64, text: "This is the second line", language: "ko" },
+    ]);
+  });
+
+  it("parses timestamp ranges with optional spacing", () => {
+    expect(
+      parseManualTranscriptText({
+        ...baseInput,
+        transcriptText: "00:12 - 00:24 This is a ranged line\n01:00-01:30 Another ranged line",
+      }),
+    ).toEqual([
+      { index: 0, startSeconds: 12, endSeconds: 24, text: "This is a ranged line", language: "ko" },
+      { index: 1, startSeconds: 60, endSeconds: 90, text: "Another ranged line", language: "ko" },
+    ]);
+  });
+
+  it("supports HH:MM:SS timestamps and keeps Korean text intact", () => {
+    expect(
+      parseManualTranscriptText({
+        ...baseInput,
+        transcriptText: "01:02:03 긴 한국어 문장을 그대로 둡니다.\n\n[00:00]   \n  English line  ",
+      }),
+    ).toEqual([
+      { index: 0, startSeconds: 3723, text: "긴 한국어 문장을 그대로 둡니다.", language: "ko" },
+      { index: 1, text: "English line", language: "ko" },
+    ]);
   });
 });

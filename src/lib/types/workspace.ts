@@ -34,6 +34,7 @@ export interface SourceDocument {
   sourceLanguage: LanguageCode;
   thumbnailLabel: string;
   providerName?: string;
+  providerReliability?: "demo" | "experimental" | "production";
   segmentIds: string[];
 }
 
@@ -88,6 +89,9 @@ export interface SourceMetadata {
   language?: string;
   canonicalUrl?: string;
   thumbnailUrl?: string;
+  providerId?: string;
+  providerName?: string;
+  providerReliability?: "demo" | "experimental" | "production";
 }
 
 export interface RawTranscriptSegment {
@@ -145,6 +149,21 @@ export interface IngestionResult {
   segments: NormalizedSourceSegment[];
   citations: SegmentCitationRef[];
   warnings: IngestionWarning[];
+}
+
+export interface ManualTranscriptInput {
+  sourceUrl: string;
+  title?: string;
+  language: string;
+  transcriptText: string;
+}
+
+export interface ParsedManualTranscriptSegment {
+  index: number;
+  startSeconds?: number;
+  endSeconds?: number;
+  text: string;
+  language: string;
 }
 
 export interface IngestionError {

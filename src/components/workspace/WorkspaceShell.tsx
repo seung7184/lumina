@@ -10,6 +10,7 @@ import type {
   LuminaDemoWorkspace,
   ReportMode,
 } from "@/lib/types/workspace";
+import type { SourceIngestionStatus } from "@/components/context-panel/source-ingestion-status";
 import { ContextPanel } from "@/components/context-panel/ContextPanel";
 import { DocumentToolbar } from "@/components/workspace/DocumentToolbar";
 import { ResearchDocument } from "@/components/workspace/ResearchDocument";
@@ -175,7 +176,7 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
     announce("Mock assistant response added with source citations.");
   }
 
-  async function handleIngestSourceUrl(url: string) {
+  async function handleIngestSourceUrl(url: string): Promise<SourceIngestionStatus> {
     try {
       const result = await ingestYouTubeSource({ kind: "youtube", url });
       const source = buildSourceDocumentFromYouTube(result.sourceMetadata, result.segments);
@@ -202,9 +203,26 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
       setActiveSegmentId(segments[0]?.id ?? "");
       setContextTab("source");
 
-      return `Mock YouTube ingestion loaded ${segments.length} segments.`;
+      return {
+        phase: "ready",
+        label: "Ready",
+        message: `Ready. ${source.providerName ?? "Mock YouTube Transcript"} loaded ${segments.length} segments with ${
+          citations.length
+        } citations.`,
+        providerName: source.providerName ?? "Mock YouTube Transcript",
+        providerReliability: source.providerReliability ?? "demo",
+        segmentCount: segments.length,
+        citationCount: citations.length,
+        warnings: result.warnings.map((warning) => formatIngestionWarning(warning.code)),
+      };
     } catch (error) {
-      return isIngestionError(error) ? error.message : "Mock YouTube ingestion failed.";
+      return {
+        phase: "error",
+        label: "Error",
+        message: formatIngestionError(error),
+        providerName: "Mock YouTube Transcript",
+        providerReliability: "demo",
+      };
     }
   }
 
@@ -344,4 +362,44 @@ function mergeCitationRefs(existing: CitationRef[], incoming: CitationRef[]) {
   const citationMap = new Map(existing.map((citation) => [citation.id, citation]));
   incoming.forEach((citation) => citationMap.set(citation.id, citation));
   return Array.from(citationMap.values());
+}
+
+function formatIngestionWarning(code: string) {
+  if (code === "EMPTY_TRANSCRIPT") {
+    return "The provider returned no transcript segments.";
+  }
+
+  if (code === "TRANSLATION_UNAVAILABLE") {
+    return "Translation is not available for every segment yet.";
+  }
+
+  if (code === "PARTIAL_TRANSCRIPT") {
+    return "Some transcript segments are missing end timestamps.";
+  }
+
+  return "The local mock ingestion completed with a warning.";
+}
+
+function formatIngestionError(error: unknown) {
+  if (!isIngestionError(error)) {
+    return "Mock YouTube ingestion failed.";
+  }
+
+  if (error.code === "INVALID_URL") {
+    return "Enter a valid YouTube URL.";
+  }
+
+  if (error.code === "UNSUPPORTED_SOURCE") {
+    return "Only YouTube URLs are supported in this ingestion slice.";
+  }
+
+  if (error.code === "TRANSCRIPT_UNAVAILABLE") {
+    return "This source was recognized, but no transcript is available yet. You can paste a manual transcript in a future flow.";
+  }
+
+  if (error.code === "EMPTY_TRANSCRIPT") {
+    return "The provider returned no transcript segments.";
+  }
+
+  return error.message;
 }
