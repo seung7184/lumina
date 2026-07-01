@@ -132,6 +132,7 @@ test("desktop workspace generates and resets a local deterministic brief", async
   const brief = page.getByRole("region", { name: "Local source-grounded brief" });
   await expect(brief).toBeVisible();
   await expect(brief.getByRole("heading", { name: "Local source-grounded brief" })).toBeVisible();
+  await expect(brief.getByText("Provider: Local Deterministic Brief · demo · No AI model used")).toBeVisible();
   await expect(brief.getByText("Evidence cards")).toBeVisible();
   await expect(brief.getByText("Brief blocks")).toBeVisible();
   await expect(brief.getByRole("link", { name: "Citation 1" }).first()).toBeVisible();

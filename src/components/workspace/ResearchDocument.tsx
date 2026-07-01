@@ -90,6 +90,11 @@ function LocalBriefSection({
         <span className="status-pill status-pill--success">Local deterministic draft</span>
         <h2>{brief.title}</h2>
         <p>{brief.subtitle}</p>
+        {brief.providerName ? (
+          <p className="local-brief__provider">
+            Provider: {brief.providerName} · {brief.providerReliability ?? "demo"} · No AI model used
+          </p>
+        ) : null}
       </header>
       {brief.warnings.length ? (
         <ul className="local-brief__warnings" aria-label="Local brief warnings">

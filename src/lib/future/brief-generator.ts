@@ -7,6 +7,7 @@ import type {
   SourceDocument,
   SourceSegment,
 } from "@/lib/types/workspace";
+import { getActiveGenerationProvider } from "@/lib/future/generation-provider-registry";
 
 export interface GenerateDeterministicBriefInput {
   source: SourceDocument;
@@ -21,6 +22,7 @@ const defaultMaxBriefBlocks = 4;
 const maxBodyLength = 220;
 
 export function generateDeterministicBrief(input: GenerateDeterministicBriefInput): DeterministicBrief {
+  const provider = getActiveGenerationProvider();
   const maxEvidenceCards = Math.max(0, input.maxEvidenceCards ?? defaultMaxEvidenceCards);
   const maxBriefBlocks = Math.max(0, input.maxBriefBlocks ?? defaultMaxBriefBlocks);
   const meaningfulSegments = input.segments
@@ -64,6 +66,9 @@ export function generateDeterministicBrief(input: GenerateDeterministicBriefInpu
     title: "Local source-grounded brief",
     subtitle: "Generated from current source segments · no AI model used",
     generatedBy: "local-deterministic",
+    providerId: provider.id,
+    providerName: provider.name,
+    providerReliability: provider.reliability,
     evidenceCards,
     blocks: buildBriefBlocks(input.source, evidenceCards, citationIds, maxBriefBlocks),
     citationIds,
