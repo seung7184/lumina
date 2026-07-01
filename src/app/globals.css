@@ -1309,7 +1309,7 @@ dd {
   text-transform: uppercase;
 }
 
-.source-ingest-form div {
+.source-ingest-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
@@ -1341,6 +1341,40 @@ dd {
   color: var(--p-text-faint);
   font-family: var(--font-mono);
   font-size: 10.5px;
+}
+
+.source-ingest-form .source-ingest-phase {
+  color: var(--p-teal-deep);
+  font-weight: 700;
+}
+
+.source-ingest-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.source-ingest-metrics span {
+  border: 1px solid var(--p-line);
+  border-radius: var(--radius-sm);
+  background: var(--p-paper-deep);
+  padding: 4px 7px;
+}
+
+.source-ingest-warnings {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.source-ingest-warnings li {
+  border-left: 2px solid var(--p-amber);
+  color: var(--p-amber-deep);
+  font-size: 11.5px;
+  line-height: 1.45;
+  padding-left: 8px;
 }
 
 .transcript-head,

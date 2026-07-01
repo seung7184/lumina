@@ -9,6 +9,7 @@ import type { KeyboardEvent } from "react";
 import { AssistantTab } from "@/components/context-panel/AssistantTab";
 import { HighlightTab } from "@/components/context-panel/HighlightTab";
 import { SourceTab } from "@/components/context-panel/SourceTab";
+import type { SourceIngestionStatus } from "@/components/context-panel/source-ingestion-status";
 
 const contextTabs = ["source", "assistant", "highlight"] as const;
 type ContextTabId = (typeof contextTabs)[number];
@@ -29,7 +30,7 @@ interface ContextPanelProps {
   responseMode: string;
   onTabChange: (tab: ContextTabId) => void;
   onActiveSegmentChange: (id: string) => void;
-  onIngestSourceUrl?: (url: string) => Promise<string>;
+  onIngestSourceUrl?: (url: string) => Promise<SourceIngestionStatus>;
   onTranslationToggle: () => void;
   onAssistantScopeChange: (scope: "source" | "collection" | "web_source") => void;
   onAssistantDraftChange: (draft: string) => void;

@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { useState } from "react";
 import type { SourceDocument, SourceSegment } from "@/lib/types/workspace";
 import { TranscriptList } from "@/components/context-panel/TranscriptList";
+import { idleSourceIngestionStatus, type SourceIngestionStatus } from "@/components/context-panel/source-ingestion-status";
 
 interface SourceTabProps {
   source: SourceDocument;
@@ -12,7 +13,7 @@ interface SourceTabProps {
   panelId: string;
   showTranslation: boolean;
   onActiveSegmentChange: (id: string) => void;
-  onIngestSourceUrl?: (url: string) => Promise<string>;
+  onIngestSourceUrl?: (url: string) => Promise<SourceIngestionStatus>;
   onMockAction: (message: string) => void;
   onTranslationToggle: () => void;
 }
@@ -29,7 +30,11 @@ export function SourceTab({
   onMockAction,
   onTranslationToggle,
 }: SourceTabProps) {
-  const [ingestStatus, setIngestStatus] = useState("");
+  const [ingestStatus, setIngestStatus] = useState<SourceIngestionStatus>({
+    ...idleSourceIngestionStatus,
+    providerName: source.providerName ?? "Mock YouTube Transcript",
+    providerReliability: source.providerReliability ?? "demo",
+  });
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -37,21 +42,68 @@ export function SourceTab({
     const sourceUrl = String(formData.get("source-url") ?? "").trim();
 
     if (!sourceUrl) {
-      setIngestStatus("Enter a YouTube source URL first.");
+      const nextStatus: SourceIngestionStatus = {
+        phase: "error",
+        label: "Error",
+        message: "Enter a YouTube source URL first.",
+        providerName: ingestStatus.providerName,
+        providerReliability: ingestStatus.providerReliability,
+      };
+      setIngestStatus(nextStatus);
       onMockAction("Enter a YouTube source URL first.");
       return;
     }
 
     if (!onIngestSourceUrl) {
-      setIngestStatus("Mock ingestion is not connected in this view.");
+      const nextStatus: SourceIngestionStatus = {
+        phase: "error",
+        label: "Error",
+        message: "Mock ingestion is not connected in this view.",
+        providerName: ingestStatus.providerName,
+        providerReliability: ingestStatus.providerReliability,
+      };
+      setIngestStatus(nextStatus);
       onMockAction("Mock ingestion is not connected in this view.");
       return;
     }
 
-    const message = await onIngestSourceUrl(sourceUrl);
-    setIngestStatus(message);
-    onMockAction(message);
+    setIngestStatus({
+      phase: "validating-url",
+      label: "Validating URL",
+      message: "Checking the source URL locally.",
+      providerName: ingestStatus.providerName,
+      providerReliability: ingestStatus.providerReliability,
+    });
+    setIngestStatus({
+      phase: "selecting-provider",
+      label: "Selecting provider",
+      message: "Choosing the local mock transcript provider.",
+      providerName: ingestStatus.providerName,
+      providerReliability: ingestStatus.providerReliability,
+    });
+    setIngestStatus({
+      phase: "fetching-transcript",
+      label: "Fetching transcript",
+      message: "Loading deterministic mock transcript data.",
+      providerName: ingestStatus.providerName,
+      providerReliability: ingestStatus.providerReliability,
+    });
+    setIngestStatus({
+      phase: "normalizing-segments",
+      label: "Normalizing segments",
+      message: "Preparing local segments and citations.",
+      providerName: ingestStatus.providerName,
+      providerReliability: ingestStatus.providerReliability,
+    });
+
+    const nextStatus = await onIngestSourceUrl(sourceUrl);
+    setIngestStatus(nextStatus);
+    onMockAction(nextStatus.message ?? nextStatus.label);
   }
+
+  const providerLine = ingestStatus.providerName
+    ? `Provider: ${ingestStatus.providerName} · ${ingestStatus.providerReliability ?? "demo"} reliability`
+    : undefined;
 
   return (
     <div className="context-tab-body" role="tabpanel" id={panelId} aria-labelledby={labelledBy}>
@@ -83,9 +135,9 @@ export function SourceTab({
           <dd>14:32</dd>
         </div>
       </dl>
-      <form className="source-ingest-form" onSubmit={handleSubmit}>
+      <form className="source-ingest-form" noValidate onSubmit={handleSubmit}>
         <label htmlFor={`${panelId}-source-url`}>Try source URL</label>
-        <div>
+        <div className="source-ingest-row">
           <input
             id={`${panelId}-source-url`}
             name="source-url"
@@ -96,10 +148,24 @@ export function SourceTab({
           />
           <button type="submit">Ingest source URL</button>
         </div>
-        <span>{source.providerName ?? "mock-youtube-transcript"}</span>
+        {providerLine ? <span>{providerLine}</span> : null}
+        <span className="source-ingest-phase">{ingestStatus.label}</span>
         <p role="status" aria-live="polite">
-          {ingestStatus}
+          {ingestStatus.message ?? ingestStatus.label}
         </p>
+        {ingestStatus.phase === "ready" ? (
+          <div className="source-ingest-metrics" aria-label="Ingestion result counts">
+            <span>Segments: {ingestStatus.segmentCount ?? 0}</span>
+            <span>Citations: {ingestStatus.citationCount ?? 0}</span>
+          </div>
+        ) : null}
+        {ingestStatus.warnings?.length ? (
+          <ul className="source-ingest-warnings" aria-label="Ingestion warnings">
+            {ingestStatus.warnings.map((warning) => (
+              <li key={warning}>{warning}</li>
+            ))}
+          </ul>
+        ) : null}
       </form>
       <div className="transcript-head">
         <strong>Transcript</strong>
