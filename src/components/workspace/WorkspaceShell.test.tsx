@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { ResearchDocument } from "./ResearchDocument";
 import { WorkspaceShell } from "./WorkspaceShell";
 import { generateDeterministicBrief } from "@/lib/future/brief-generator";
@@ -244,6 +244,8 @@ describe("WorkspaceShell", () => {
     render(<WorkspaceShell demo={luminaDemo} />);
 
     expect(screen.getByRole("button", { name: "Generate local brief" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Copy brief Markdown" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Copy evidence Markdown" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Generate local brief" }));
 
     const brief = screen.getByRole("region", { name: "Local source-grounded brief" });
@@ -254,12 +256,47 @@ describe("WorkspaceShell", () => {
     expect(within(brief).getByText("Generation policy: allowed · source-grounded display enabled")).toBeInTheDocument();
     expect(within(brief).getByText("Evidence cards")).toBeInTheDocument();
     expect(within(brief).getByText("Brief blocks")).toBeInTheDocument();
+    expect(within(brief).getByRole("button", { name: "Copy brief Markdown" })).toBeEnabled();
+    expect(within(brief).getByRole("button", { name: "Copy evidence Markdown" })).toBeEnabled();
     expect(within(brief).getAllByText(/AI knowledge is severely lacking right now/i).length).toBeGreaterThan(0);
     expect(within(brief).getAllByText(/Source-backed point:/i).length).toBeGreaterThan(0);
     expect(within(brief).getAllByRole("link", { name: "Citation 1" }).length).toBeGreaterThan(0);
     expect(screen.queryByText(/AI confidence/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/AI analyzed/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /OpenAI brief|Anthropic brief|Gemini brief/i })).not.toBeInTheDocument();
+  });
+
+  it("copies local brief and evidence cards as source-grounded Markdown", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+
+    render(<WorkspaceShell demo={luminaDemo} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Generate local brief" }));
+    const brief = screen.getByRole("region", { name: "Local source-grounded brief" });
+
+    fireEvent.click(within(brief).getByRole("button", { name: "Copy brief Markdown" }));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    expect(writeText).toHaveBeenLastCalledWith(expect.stringContaining("# Local source-grounded brief"));
+    expect(writeText).toHaveBeenLastCalledWith(expect.stringContaining("Provider: Local Deterministic Brief · demo"));
+    expect(writeText).toHaveBeenLastCalledWith(expect.stringContaining("Citation audit: passed · 0 errors · 0 warnings"));
+    expect(writeText).toHaveBeenLastCalledWith(
+      expect.stringContaining("Generation policy: allowed · source-grounded display enabled"),
+    );
+    expect(writeText).toHaveBeenLastCalledWith(expect.stringContaining("Note: local deterministic draft, no AI model used."));
+    expect(writeText).toHaveBeenLastCalledWith(expect.stringContaining("[Citation 1 (c1)]"));
+    expect(screen.getByText("Local brief Markdown copied.")).toBeInTheDocument();
+
+    fireEvent.click(within(brief).getByRole("button", { name: "Copy evidence Markdown" }));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(2));
+    expect(writeText).toHaveBeenLastCalledWith(expect.stringContaining("# Evidence cards for Local source-grounded brief"));
+    expect(writeText).toHaveBeenLastCalledWith(expect.not.stringContaining("## Brief blocks"));
+    expect(screen.getByText("Evidence cards Markdown copied.")).toBeInTheDocument();
   });
 
   it("clears the local brief when a mock webpage or PDF source replaces the active source", async () => {
@@ -343,6 +380,8 @@ describe("WorkspaceShell", () => {
         summary={luminaDemo.summaries.en}
         localBrief={blockedBrief}
         visualsEnabled
+        onCopyEvidenceCardsMarkdown={() => undefined}
+        onCopyLocalBriefMarkdown={() => undefined}
         onGenerateLocalBrief={() => undefined}
         onLanguageChange={() => undefined}
         onMockAction={() => undefined}
@@ -352,6 +391,9 @@ describe("WorkspaceShell", () => {
 
     const brief = screen.getByRole("region", { name: "Local source-grounded brief" });
     expect(within(brief).getByText("Generation policy: blocked · source-grounded display disabled")).toBeInTheDocument();
+    expect(within(brief).getByRole("button", { name: "Copy brief Markdown" })).toBeDisabled();
+    expect(within(brief).getByRole("button", { name: "Copy evidence Markdown" })).toBeDisabled();
+    expect(within(brief).getByText("Copy export unavailable while generation policy blocks display.")).toBeInTheDocument();
     expect(
       within(brief).getByText("Generated output is blocked by policy until citation/provider issues are resolved."),
     ).toBeInTheDocument();

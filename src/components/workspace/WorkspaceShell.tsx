@@ -34,6 +34,7 @@ import {
 import { ingestMockPdfSource } from "@/lib/future/ingestion-pdf";
 import { ingestMockWebpageSource } from "@/lib/future/ingestion-web";
 import { generateDeterministicBrief } from "@/lib/future/brief-generator";
+import { exportEvidenceCardsMarkdown, exportLocalBriefMarkdown } from "@/lib/future/brief-markdown-export";
 
 interface WorkspaceShellProps {
   demo: LuminaDemoWorkspace;
@@ -198,6 +199,38 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
 
     setLocalBrief(brief);
     announce(`Local source-grounded brief generated with ${brief.evidenceCards.length} evidence cards.`);
+  }
+
+  async function handleCopyLocalBriefMarkdown() {
+    const result = exportLocalBriefMarkdown({
+      brief: localBrief,
+      source: workspace.source,
+      citations: summary.citations,
+    });
+
+    if (!result.allowed) {
+      announce(result.reason);
+      return;
+    }
+
+    const copied = await copyTextToClipboard(result.markdown);
+    announce(copied ? "Local brief Markdown copied." : "Local brief Markdown prepared, but clipboard was unavailable.");
+  }
+
+  async function handleCopyEvidenceCardsMarkdown() {
+    const result = exportEvidenceCardsMarkdown({
+      brief: localBrief,
+      source: workspace.source,
+      citations: summary.citations,
+    });
+
+    if (!result.allowed) {
+      announce(result.reason);
+      return;
+    }
+
+    const copied = await copyTextToClipboard(result.markdown);
+    announce(copied ? "Evidence cards Markdown copied." : "Evidence cards Markdown prepared, but clipboard was unavailable.");
   }
 
   async function handleIngestSourceUrl(url: string): Promise<SourceIngestionStatus> {
@@ -369,6 +402,8 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
           summary={summary}
           localBrief={localBrief}
           visualsEnabled={visualsEnabled}
+          onCopyEvidenceCardsMarkdown={handleCopyEvidenceCardsMarkdown}
+          onCopyLocalBriefMarkdown={handleCopyLocalBriefMarkdown}
           onGenerateLocalBrief={handleGenerateLocalBrief}
           onLanguageChange={setLanguage}
           onMockAction={announce}
@@ -545,4 +580,36 @@ function buildReadyStatus(
     citationCount,
     warnings: warnings.map(formatIngestionWarning),
   };
+}
+
+async function copyTextToClipboard(text: string) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      return copyTextWithTextarea(text);
+    }
+  }
+
+  return copyTextWithTextarea(text);
+}
+
+function copyTextWithTextarea(text: string) {
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.top = "-9999px";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+
+  try {
+    return document.execCommand("copy");
+  } catch {
+    return false;
+  } finally {
+    document.body.removeChild(textarea);
+  }
 }
