@@ -57,6 +57,15 @@ describe("generateDeterministicBrief", () => {
     expect(first.providerId).toBe("local-deterministic-brief");
     expect(first.providerName).toBe("Local Deterministic Brief");
     expect(first.providerReliability).toBe("demo");
+    expect(first.citationAudit).toMatchObject({
+      id: "audit-brief-src-test-local-deterministic",
+      briefId: "brief-src-test-local-deterministic",
+      passed: true,
+      errorCount: 0,
+      warningCount: 0,
+      checkedCitationIds: ["cite-1", "cite-2"],
+      checkedSegmentIds: ["seg-1", "seg-2"],
+    });
     expect(first.evidenceCards).toHaveLength(2);
     expect(first.evidenceCards[0]).toMatchObject({
       id: "evidence-src-test-seg-1",
@@ -101,6 +110,13 @@ describe("generateDeterministicBrief", () => {
     expect(brief.evidenceCards.map((card) => card.segmentIds[0])).toEqual(["seg-1", "seg-2"]);
     expect(brief.evidenceCards.flatMap((card) => card.citationIds)).toEqual(["cite-1"]);
     expect(brief.citationIds).toEqual(["cite-1"]);
+    expect(brief.citationAudit).toMatchObject({
+      passed: true,
+      errorCount: 0,
+      checkedCitationIds: ["cite-1"],
+      checkedSegmentIds: ["seg-1", "seg-2"],
+    });
+    expect(brief.citationAudit?.warningCount).toBeGreaterThan(0);
     expect(brief.warnings).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -120,6 +136,19 @@ describe("generateDeterministicBrief", () => {
 
     expect(brief.evidenceCards).toEqual([]);
     expect(brief.blocks).toEqual([]);
+    expect(brief.citationAudit).toMatchObject({
+      passed: true,
+      errorCount: 0,
+      warningCount: 1,
+    });
+    expect(brief.citationAudit?.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "EMPTY_GENERATED_BRIEF",
+          severity: "warning",
+        }),
+      ]),
+    );
     expect(brief.warnings).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

@@ -215,11 +215,13 @@ describe("WorkspaceShell", () => {
     expect(within(brief).getByRole("heading", { name: "Local source-grounded brief" })).toBeInTheDocument();
     expect(within(brief).getByText("Generated from current source segments · no AI model used")).toBeInTheDocument();
     expect(within(brief).getByText("Provider: Local Deterministic Brief · demo · No AI model used")).toBeInTheDocument();
+    expect(within(brief).getByText("Citation audit: passed · 0 errors · 0 warnings")).toBeInTheDocument();
     expect(within(brief).getByText("Evidence cards")).toBeInTheDocument();
     expect(within(brief).getByText("Brief blocks")).toBeInTheDocument();
     expect(within(brief).getAllByText(/AI knowledge is severely lacking right now/i).length).toBeGreaterThan(0);
     expect(within(brief).getAllByText(/Source-backed point:/i).length).toBeGreaterThan(0);
     expect(within(brief).getAllByRole("link", { name: "Citation 1" }).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/AI confidence/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/AI analyzed/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /OpenAI brief|Anthropic brief|Gemini brief/i })).not.toBeInTheDocument();
   });
@@ -242,6 +244,7 @@ describe("WorkspaceShell", () => {
     fireEvent.click(screen.getByRole("button", { name: "Generate local brief" }));
     let brief = screen.getByRole("region", { name: "Local source-grounded brief" });
     expect(brief).toBeInTheDocument();
+    expect(within(brief).getByText("Citation audit: passed · 0 errors · 0 warnings")).toBeInTheDocument();
     expect(
       within(brief).getAllByText("This mock webpage boundary represents a future article source without fetching the live page.").length,
     ).toBeGreaterThan(0);
@@ -257,6 +260,7 @@ describe("WorkspaceShell", () => {
     fireEvent.click(screen.getByRole("button", { name: "Generate local brief" }));
     brief = screen.getByRole("region", { name: "Local source-grounded brief" });
     expect(brief).toBeInTheDocument();
+    expect(within(brief).getByText("Citation audit: passed · 0 errors · 0 warnings")).toBeInTheDocument();
     expect(
       within(brief).getAllByText("This mock PDF boundary represents a future uploaded or linked document source.").length,
     ).toBeGreaterThan(0);

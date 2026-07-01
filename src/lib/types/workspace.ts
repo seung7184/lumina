@@ -183,6 +183,40 @@ export interface BriefBlock {
   kind: "overview" | "key-point" | "limitation" | "next-step";
 }
 
+export type CitationAuditSeverity = "info" | "warning" | "error";
+
+export type CitationAuditIssueCode =
+  | "MISSING_BRIEF_CITATION"
+  | "UNKNOWN_CITATION_ID"
+  | "UNKNOWN_SEGMENT_ID"
+  | "UNKNOWN_EVIDENCE_CARD_ID"
+  | "UNCITED_EVIDENCE_CARD"
+  | "UNCITED_BRIEF_BLOCK"
+  | "ORPHANED_EVIDENCE_CARD"
+  | "EMPTY_GENERATED_BRIEF"
+  | "AUDIT_PASSED";
+
+export interface CitationAuditIssue {
+  id: string;
+  code: CitationAuditIssueCode;
+  severity: CitationAuditSeverity;
+  message: string;
+  targetType: "brief" | "evidence-card" | "brief-block" | "citation" | "segment";
+  targetId?: string;
+}
+
+export interface CitationAuditResult {
+  id: string;
+  briefId: string;
+  passed: boolean;
+  issueCount: number;
+  errorCount: number;
+  warningCount: number;
+  checkedCitationIds: string[];
+  checkedSegmentIds: string[];
+  issues: CitationAuditIssue[];
+}
+
 export interface DeterministicBrief {
   id: string;
   sourceId: string;
@@ -196,6 +230,7 @@ export interface DeterministicBrief {
   blocks: BriefBlock[];
   citationIds: string[];
   warnings: IngestionWarning[];
+  citationAudit?: CitationAuditResult;
 }
 
 export interface IngestionResult {

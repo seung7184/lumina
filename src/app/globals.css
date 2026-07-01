@@ -850,6 +850,43 @@ dd {
   font-weight: 700;
 }
 
+.local-brief__audit {
+  display: grid;
+  gap: 6px;
+  max-width: 760px;
+  border-left: 2px solid var(--p-teal);
+  padding-left: 10px;
+}
+
+.local-brief__audit--warning {
+  border-left-color: var(--p-amber);
+}
+
+.local-brief__audit--error {
+  border-left-color: var(--p-coral);
+}
+
+.local-brief__audit p {
+  color: var(--p-ink-soft);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.local-brief__audit ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 16px;
+}
+
+.local-brief__audit li {
+  color: var(--p-text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .local-brief__warnings {
   display: grid;
   gap: 6px;

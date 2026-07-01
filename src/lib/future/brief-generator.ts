@@ -7,6 +7,7 @@ import type {
   SourceDocument,
   SourceSegment,
 } from "@/lib/types/workspace";
+import { auditGeneratedBriefCitationContract } from "@/lib/future/citation-audit";
 import { getActiveGenerationProvider } from "@/lib/future/generation-provider-registry";
 
 export interface GenerateDeterministicBriefInput {
@@ -59,8 +60,7 @@ export function generateDeterministicBrief(input: GenerateDeterministicBriefInpu
     return buildEvidenceCard(input.source, segment, citationIds, index);
   });
   const citationIds = collectCitationIds(evidenceCards);
-
-  return {
+  const brief: DeterministicBrief = {
     id: `brief-${input.source.id}-local-deterministic`,
     sourceId: input.source.id,
     title: "Local source-grounded brief",
@@ -73,6 +73,16 @@ export function generateDeterministicBrief(input: GenerateDeterministicBriefInpu
     blocks: buildBriefBlocks(input.source, evidenceCards, citationIds, maxBriefBlocks),
     citationIds,
     warnings: dedupeWarnings(warnings),
+  };
+  const citationAudit = auditGeneratedBriefCitationContract({
+    brief,
+    segments: input.segments,
+    citations: input.citations,
+  });
+
+  return {
+    ...brief,
+    citationAudit,
   };
 }
 

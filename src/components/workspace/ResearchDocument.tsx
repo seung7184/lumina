@@ -1,5 +1,6 @@
 import type {
   BriefBlock,
+  CitationAuditResult,
   DeterministicBrief,
   DocumentBlock,
   EvidenceCard,
@@ -95,6 +96,7 @@ function LocalBriefSection({
             Provider: {brief.providerName} · {brief.providerReliability ?? "demo"} · No AI model used
           </p>
         ) : null}
+        {brief.citationAudit ? <CitationAuditStatus audit={brief.citationAudit} /> : null}
       </header>
       {brief.warnings.length ? (
         <ul className="local-brief__warnings" aria-label="Local brief warnings">
@@ -118,6 +120,23 @@ function LocalBriefSection({
         </section>
       </div>
     </section>
+  );
+}
+
+function CitationAuditStatus({ audit }: { audit: CitationAuditResult }) {
+  const visibleIssues = audit.issues.filter((issue) => issue.severity === "error" || issue.severity === "warning");
+
+  return (
+    <div className={`local-brief__audit local-brief__audit--${getAuditTone(audit)}`}>
+      <p>{formatAuditStatus(audit)}</p>
+      {visibleIssues.length ? (
+        <ul aria-label="Citation audit issues">
+          {visibleIssues.map((issue) => (
+            <li key={issue.id}>{issue.message}</li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
   );
 }
 
@@ -154,6 +173,30 @@ function BriefBlockView({
       {renderCitations(block.citationIds, citationMap)}
     </article>
   );
+}
+
+function formatAuditStatus(audit: CitationAuditResult) {
+  const status = !audit.passed ? "needs review" : audit.warningCount > 0 ? "passed with warnings" : "passed";
+  return `Citation audit: ${status} · ${formatIssueCount(audit.errorCount, "error")} · ${formatIssueCount(
+    audit.warningCount,
+    "warning",
+  )}`;
+}
+
+function formatIssueCount(count: number, label: "error" | "warning") {
+  return `${count} ${label}${count === 1 ? "" : "s"}`;
+}
+
+function getAuditTone(audit: CitationAuditResult) {
+  if (!audit.passed) {
+    return "error";
+  }
+
+  if (audit.warningCount > 0) {
+    return "warning";
+  }
+
+  return "success";
 }
 
 function renderBlock(
