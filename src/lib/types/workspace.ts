@@ -256,6 +256,38 @@ export interface GenerationPolicyResult {
   issues: GenerationPolicyIssue[];
 }
 
+export type ResearchCollectionStatus = "single-source" | "multi-source-boundary";
+
+export interface CollectionSourceItem {
+  id: string;
+  sourceId: string;
+  title: string;
+  type: SourceType;
+  providerName?: string;
+  providerReliability?: "demo" | "experimental" | "production";
+  segmentCount: number;
+  citationCount: number;
+  addedOrder: number;
+  isActive: boolean;
+}
+
+export interface ResearchCollection {
+  id: string;
+  activeSourceId: string;
+  status: ResearchCollectionStatus;
+  sourceCount: number;
+  sources: CollectionSourceItem[];
+}
+
+export interface GeneratedBriefSourceBinding {
+  collectionId: string;
+  activeSourceId: string;
+  sourceIds: string[];
+  sourceCount: number;
+  scope: "active-source-only";
+  status: "bound-to-active-source";
+}
+
 export interface DeterministicBrief {
   id: string;
   sourceId: string;
@@ -271,6 +303,7 @@ export interface DeterministicBrief {
   warnings: IngestionWarning[];
   citationAudit?: CitationAuditResult;
   generationPolicy?: GenerationPolicyResult;
+  sourceBinding?: GeneratedBriefSourceBinding;
 }
 
 export interface IngestionResult {

@@ -12,6 +12,7 @@ import type {
   LuminaDemoWorkspace,
   ManualTranscriptInput,
   PdfSourceInput,
+  ResearchCollection,
   ReportMode,
   SourceDocument,
   SourceSegment,
@@ -35,6 +36,12 @@ import { ingestMockPdfSource } from "@/lib/future/ingestion-pdf";
 import { ingestMockWebpageSource } from "@/lib/future/ingestion-web";
 import { generateDeterministicBrief } from "@/lib/future/brief-generator";
 import { exportEvidenceCardsMarkdown, exportLocalBriefMarkdown } from "@/lib/future/brief-markdown-export";
+import {
+  addSourceReferenceToCollection,
+  buildGeneratedBriefSourceBinding,
+  createResearchCollectionFromSource,
+  setActiveCollectionSource,
+} from "@/lib/future/research-collection";
 
 interface WorkspaceShellProps {
   demo: LuminaDemoWorkspace;
@@ -70,6 +77,13 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
   const [assistantDraft, setAssistantDraft] = useState("");
   const [localAssistantMessages, setLocalAssistantMessages] = useState<AssistantMessage[]>([]);
   const [localBrief, setLocalBrief] = useState<DeterministicBrief | null>(null);
+  const [researchCollection, setResearchCollection] = useState<ResearchCollection>(() =>
+    createResearchCollectionFromSource({
+      source: demo.source,
+      segmentCount: demo.segments.length,
+      citationCount: demo.summaries.en.citations.length,
+    }),
+  );
   const [feedback, setFeedback] = useState("");
   const [contextDrawerOpen, setContextDrawerOpen] = useState(false);
   const contextDrawerRef = useRef<HTMLElement>(null);
@@ -197,7 +211,10 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
       citations: summary.citations,
     });
 
-    setLocalBrief(brief);
+    setLocalBrief({
+      ...brief,
+      sourceBinding: buildGeneratedBriefSourceBinding(researchCollection, workspace.source),
+    });
     announce(`Local source-grounded brief generated with ${brief.evidenceCards.length} evidence cards.`);
   }
 
@@ -341,6 +358,16 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
 
   function applyIngestionResult(source: SourceDocument, segments: SourceSegment[], citations: CitationRef[]) {
     setLocalBrief(null);
+    setResearchCollection((current) =>
+      setActiveCollectionSource(
+        addSourceReferenceToCollection(current, {
+          source,
+          segmentCount: segments.length,
+          citationCount: citations.length,
+        }),
+        source.id,
+      ),
+    );
     setWorkspace((current) => ({
       ...current,
       source,
@@ -419,6 +446,7 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
         assistantScope={assistantScope}
         highlights={workspace.highlights}
         localBrief={localBrief}
+        researchCollection={researchCollection}
         responseMode={responseMode}
         segments={workspace.segments}
         showTranslation={showTranslation}
@@ -478,6 +506,7 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
               highlights={workspace.highlights}
               idBase="context-drawer"
               localBrief={localBrief}
+              researchCollection={researchCollection}
               responseMode={responseMode}
               segments={workspace.segments}
               showTranslation={showTranslation}

@@ -42,7 +42,7 @@ describe("WorkspaceShell", () => {
 
     fireEvent.click(screen.getByRole("tab", { name: "Source" }));
     const sourcePanel = screen.getByRole("tabpanel", { name: /Source/i });
-    expect(within(sourcePanel).getByText(/7 segments/i)).toBeInTheDocument();
+    expect(within(sourcePanel).getAllByText(/7 segments/i).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("switch", { name: /Translate transcript/i }));
     expect(screen.queryByText(/AI knowledge is severely lacking right now/i)).not.toBeInTheDocument();
 
@@ -105,18 +105,23 @@ describe("WorkspaceShell", () => {
 
     const sourcePanel = screen.getByRole("tabpanel", { name: /Source/i });
     const pipeline = within(sourcePanel).getByRole("region", { name: "Source-grounded pipeline status" });
+    const collectionBoundary = within(sourcePanel).getByRole("region", { name: "Source collection boundary" });
 
     expect(within(pipeline).getByText("Source provider → Generation provider → Citation audit → Policy gate")).toBeInTheDocument();
     expect(within(pipeline).getByText("Source: Mock YouTube Transcript · demo")).toBeInTheDocument();
     expect(within(pipeline).getByText("Generation: not generated yet")).toBeInTheDocument();
     expect(within(pipeline).getByText("Citation audit: pending")).toBeInTheDocument();
     expect(within(pipeline).getByText("Policy gate: pending")).toBeInTheDocument();
+    expect(within(collectionBoundary).getByText("Single source reference · no cross-source synthesis")).toBeInTheDocument();
+    expect(within(collectionBoundary).getByText(/People Losing Everything.*active source/i)).toBeInTheDocument();
+    expect(within(collectionBoundary).getByText("Local brief binding: pending")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Generate local brief" }));
 
     expect(within(pipeline).getByText("Generation: Local Deterministic Brief · demo")).toBeInTheDocument();
     expect(within(pipeline).getByText("Citation audit: passed")).toBeInTheDocument();
     expect(within(pipeline).getByText("Policy gate: allowed")).toBeInTheDocument();
+    expect(within(collectionBoundary).getByText(`Local brief binding: active source only · ${luminaDemo.source.id}`)).toBeInTheDocument();
     expect(screen.queryByText(/AI confidence/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /OpenAI brief|Anthropic brief|Gemini brief/i })).not.toBeInTheDocument();
 
@@ -130,6 +135,14 @@ describe("WorkspaceShell", () => {
     expect(within(pipeline).getByText("Generation: not generated yet")).toBeInTheDocument();
     expect(within(pipeline).getByText("Citation audit: pending")).toBeInTheDocument();
     expect(within(pipeline).getByText("Policy gate: pending")).toBeInTheDocument();
+    expect(within(collectionBoundary).getByText("2 source references · active-source-only generation · no cross-source synthesis")).toBeInTheDocument();
+    expect(within(collectionBoundary).getByText(/example\.com · active source/i)).toBeInTheDocument();
+    expect(within(collectionBoundary).getByText("Local brief binding: pending")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Generate local brief" }));
+    expect(
+      within(collectionBoundary).getByText("Local brief binding: active source only · src-webpage-example-com-articles-pipeline-reset"),
+    ).toBeInTheDocument();
   });
 
   it("shows calm Source-tab feedback for unsupported ingestion URLs", async () => {

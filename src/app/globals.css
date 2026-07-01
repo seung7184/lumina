@@ -1578,6 +1578,63 @@ dd {
   border-left-color: var(--p-coral);
 }
 
+.collection-boundary-panel {
+  display: grid;
+  gap: 9px;
+  border-bottom: 1px solid var(--p-line);
+  padding: 0 0 14px;
+}
+
+.collection-boundary-panel > div {
+  display: grid;
+  gap: 3px;
+}
+
+.collection-boundary-panel strong {
+  color: var(--p-ink-soft);
+  font-size: 12px;
+}
+
+.collection-boundary-panel p,
+.collection-boundary-panel small {
+  margin: 0;
+  color: var(--p-text-faint);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.45;
+}
+
+.collection-boundary-panel ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.collection-boundary-panel li {
+  display: grid;
+  gap: 3px;
+  border-left: 2px solid var(--p-line-strong);
+  padding-left: 9px;
+}
+
+.collection-boundary-panel li.is-active {
+  border-left-color: var(--p-teal);
+}
+
+.collection-boundary-panel span {
+  color: var(--p-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.collection-boundary-panel__binding {
+  color: var(--p-teal-deep);
+  font-weight: 700;
+}
+
 .source-ingest-form {
   display: grid;
   gap: 7px;
