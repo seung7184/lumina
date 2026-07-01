@@ -8,6 +8,7 @@ import type {
   SourceSegment,
 } from "@/lib/types/workspace";
 import { auditGeneratedBriefCitationContract } from "@/lib/future/citation-audit";
+import { evaluateGenerationPolicy } from "@/lib/future/generation-policy-gate";
 import { getActiveGenerationProvider } from "@/lib/future/generation-provider-registry";
 
 export interface GenerateDeterministicBriefInput {
@@ -79,10 +80,15 @@ export function generateDeterministicBrief(input: GenerateDeterministicBriefInpu
     segments: input.segments,
     citations: input.citations,
   });
+  const auditedBrief = { ...brief, citationAudit };
+  const generationPolicy = evaluateGenerationPolicy({
+    brief: auditedBrief,
+    provider,
+  });
 
   return {
-    ...brief,
-    citationAudit,
+    ...auditedBrief,
+    generationPolicy,
   };
 }
 

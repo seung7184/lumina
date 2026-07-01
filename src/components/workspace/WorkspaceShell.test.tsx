@@ -1,7 +1,10 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { ResearchDocument } from "./ResearchDocument";
 import { WorkspaceShell } from "./WorkspaceShell";
+import { generateDeterministicBrief } from "@/lib/future/brief-generator";
 import { luminaDemo } from "@/lib/mock/lumina-demo";
+import type { DeterministicBrief } from "@/lib/types/workspace";
 
 describe("WorkspaceShell", () => {
   it("renders the canonical Lumina workspace and updates local UI state", () => {
@@ -216,6 +219,7 @@ describe("WorkspaceShell", () => {
     expect(within(brief).getByText("Generated from current source segments · no AI model used")).toBeInTheDocument();
     expect(within(brief).getByText("Provider: Local Deterministic Brief · demo · No AI model used")).toBeInTheDocument();
     expect(within(brief).getByText("Citation audit: passed · 0 errors · 0 warnings")).toBeInTheDocument();
+    expect(within(brief).getByText("Generation policy: allowed · source-grounded display enabled")).toBeInTheDocument();
     expect(within(brief).getByText("Evidence cards")).toBeInTheDocument();
     expect(within(brief).getByText("Brief blocks")).toBeInTheDocument();
     expect(within(brief).getAllByText(/AI knowledge is severely lacking right now/i).length).toBeGreaterThan(0);
@@ -245,6 +249,7 @@ describe("WorkspaceShell", () => {
     let brief = screen.getByRole("region", { name: "Local source-grounded brief" });
     expect(brief).toBeInTheDocument();
     expect(within(brief).getByText("Citation audit: passed · 0 errors · 0 warnings")).toBeInTheDocument();
+    expect(within(brief).getByText("Generation policy: allowed · source-grounded display enabled")).toBeInTheDocument();
     expect(
       within(brief).getAllByText("This mock webpage boundary represents a future article source without fetching the live page.").length,
     ).toBeGreaterThan(0);
@@ -261,8 +266,65 @@ describe("WorkspaceShell", () => {
     brief = screen.getByRole("region", { name: "Local source-grounded brief" });
     expect(brief).toBeInTheDocument();
     expect(within(brief).getByText("Citation audit: passed · 0 errors · 0 warnings")).toBeInTheDocument();
+    expect(within(brief).getByText("Generation policy: allowed · source-grounded display enabled")).toBeInTheDocument();
     expect(
       within(brief).getAllByText("This mock PDF boundary represents a future uploaded or linked document source.").length,
     ).toBeGreaterThan(0);
+  });
+
+  it("blocks normal local brief rendering when generation policy has errors", () => {
+    const generatedBrief = generateDeterministicBrief({
+      source: luminaDemo.source,
+      segments: luminaDemo.segments,
+      citations: luminaDemo.summaries.en.citations,
+    });
+    const blockedBrief: DeterministicBrief = {
+      ...generatedBrief,
+      generationPolicy: {
+        id: "policy-blocked-test",
+        briefId: generatedBrief.id,
+        providerId: generatedBrief.providerId,
+        allowedToDisplay: false,
+        allowedToUseAsSourceGrounded: false,
+        issueCount: 1,
+        errorCount: 1,
+        warningCount: 0,
+        issues: [
+          {
+            id: "policy-blocked-test-issue-1",
+            code: "PROVIDER_USES_AI",
+            severity: "error",
+            message: "Generation provider uses AI and cannot be treated as local deterministic output.",
+            targetType: "provider",
+            targetId: generatedBrief.providerId,
+          },
+        ],
+      },
+    };
+
+    render(
+      <ResearchDocument
+        activeModeId="summary"
+        language="en"
+        reportModes={luminaDemo.reportModes}
+        source={luminaDemo.source}
+        summary={luminaDemo.summaries.en}
+        localBrief={blockedBrief}
+        visualsEnabled
+        onGenerateLocalBrief={() => undefined}
+        onLanguageChange={() => undefined}
+        onMockAction={() => undefined}
+        onReportModeChange={() => undefined}
+      />,
+    );
+
+    const brief = screen.getByRole("region", { name: "Local source-grounded brief" });
+    expect(within(brief).getByText("Generation policy: blocked · source-grounded display disabled")).toBeInTheDocument();
+    expect(
+      within(brief).getByText("Generated output is blocked by policy until citation/provider issues are resolved."),
+    ).toBeInTheDocument();
+    expect(within(brief).getByText("Generation provider uses AI and cannot be treated as local deterministic output.")).toBeInTheDocument();
+    expect(within(brief).queryByText("Evidence cards")).not.toBeInTheDocument();
+    expect(within(brief).queryByText("Brief blocks")).not.toBeInTheDocument();
   });
 });

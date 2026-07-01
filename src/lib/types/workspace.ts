@@ -217,6 +217,42 @@ export interface CitationAuditResult {
   issues: CitationAuditIssue[];
 }
 
+export type GenerationPolicySeverity = "info" | "warning" | "error";
+
+export type GenerationPolicyIssueCode =
+  | "POLICY_PASSED"
+  | "PROVIDER_NOT_FOUND"
+  | "PROVIDER_NOT_ACTIVE"
+  | "PROVIDER_USES_AI"
+  | "PROVIDER_ALLOWS_UNCITED_CLAIMS"
+  | "PROVIDER_DOES_NOT_REQUIRE_CITATIONS"
+  | "PROVIDER_DOES_NOT_PRESERVE_CITATIONS"
+  | "MISSING_CITATION_AUDIT"
+  | "CITATION_AUDIT_FAILED"
+  | "CITATION_AUDIT_ERRORS"
+  | "EMPTY_GENERATED_OUTPUT";
+
+export interface GenerationPolicyIssue {
+  id: string;
+  code: GenerationPolicyIssueCode;
+  severity: GenerationPolicySeverity;
+  message: string;
+  targetType: "brief" | "provider" | "citation-audit";
+  targetId?: string;
+}
+
+export interface GenerationPolicyResult {
+  id: string;
+  briefId: string;
+  providerId?: string;
+  allowedToDisplay: boolean;
+  allowedToUseAsSourceGrounded: boolean;
+  issueCount: number;
+  errorCount: number;
+  warningCount: number;
+  issues: GenerationPolicyIssue[];
+}
+
 export interface DeterministicBrief {
   id: string;
   sourceId: string;
@@ -231,6 +267,7 @@ export interface DeterministicBrief {
   citationIds: string[];
   warnings: IngestionWarning[];
   citationAudit?: CitationAuditResult;
+  generationPolicy?: GenerationPolicyResult;
 }
 
 export interface IngestionResult {

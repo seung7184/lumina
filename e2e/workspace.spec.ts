@@ -134,6 +134,7 @@ test("desktop workspace generates and resets a local deterministic brief", async
   await expect(brief.getByRole("heading", { name: "Local source-grounded brief" })).toBeVisible();
   await expect(brief.getByText("Provider: Local Deterministic Brief · demo · No AI model used")).toBeVisible();
   await expect(brief.getByText("Citation audit: passed · 0 errors · 0 warnings")).toBeVisible();
+  await expect(brief.getByText("Generation policy: allowed · source-grounded display enabled")).toBeVisible();
   await expect(brief.getByText("Evidence cards")).toBeVisible();
   await expect(brief.getByText("Brief blocks")).toBeVisible();
   await expect(brief.getByRole("link", { name: "Citation 1" }).first()).toBeVisible();
@@ -153,6 +154,7 @@ test("desktop workspace generates and resets a local deterministic brief", async
     regeneratedBrief.getByText("This mock webpage boundary represents a future article source without fetching the live page.").first(),
   ).toBeVisible();
   await expect(regeneratedBrief.getByText("Citation audit: passed · 0 errors · 0 warnings")).toBeVisible();
+  await expect(regeneratedBrief.getByText("Generation policy: allowed · source-grounded display enabled")).toBeVisible();
   await expect(regeneratedBrief.getByRole("link", { name: "Citation 1" }).first()).toBeVisible();
 
   await sourcePanel.getByLabel("Mock PDF filename").fill("lumina-boundary.pdf");
@@ -164,6 +166,7 @@ test("desktop workspace generates and resets a local deterministic brief", async
   const pdfBrief = page.getByRole("region", { name: "Local source-grounded brief" });
   await expect(pdfBrief).toBeVisible();
   await expect(pdfBrief.getByText("Citation audit: passed · 0 errors · 0 warnings")).toBeVisible();
+  await expect(pdfBrief.getByText("Generation policy: allowed · source-grounded display enabled")).toBeVisible();
   await expect(pdfBrief.getByText("This mock PDF boundary represents a future uploaded or linked document source.").first()).toBeVisible();
   await expectNoHorizontalOverflow(page);
   expect(errors).toEqual([]);

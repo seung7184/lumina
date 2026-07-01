@@ -66,6 +66,21 @@ describe("generateDeterministicBrief", () => {
       checkedCitationIds: ["cite-1", "cite-2"],
       checkedSegmentIds: ["seg-1", "seg-2"],
     });
+    expect(first.generationPolicy).toMatchObject({
+      id: "policy-brief-src-test-local-deterministic",
+      briefId: "brief-src-test-local-deterministic",
+      providerId: "local-deterministic-brief",
+      allowedToDisplay: true,
+      allowedToUseAsSourceGrounded: true,
+      errorCount: 0,
+      warningCount: 0,
+    });
+    expect(first.generationPolicy?.issues).toEqual([
+      expect.objectContaining({
+        code: "POLICY_PASSED",
+        severity: "info",
+      }),
+    ]);
     expect(first.evidenceCards).toHaveLength(2);
     expect(first.evidenceCards[0]).toMatchObject({
       id: "evidence-src-test-seg-1",
@@ -141,6 +156,20 @@ describe("generateDeterministicBrief", () => {
       errorCount: 0,
       warningCount: 1,
     });
+    expect(brief.generationPolicy).toMatchObject({
+      allowedToDisplay: true,
+      allowedToUseAsSourceGrounded: true,
+      errorCount: 0,
+      warningCount: 1,
+    });
+    expect(brief.generationPolicy?.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "EMPTY_GENERATED_OUTPUT",
+          severity: "warning",
+        }),
+      ]),
+    );
     expect(brief.citationAudit?.issues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
