@@ -2,6 +2,7 @@ import { Copy, Globe2, Play } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import type {
+  DeterministicBrief,
   ManualTranscriptInput,
   PdfSourceInput,
   SourceDocument,
@@ -15,10 +16,12 @@ import {
 import type { SourceProviderDescriptor, SourceProviderKind } from "@/lib/future/ingestion-provider-registry";
 import { TranscriptList } from "@/components/context-panel/TranscriptList";
 import { idleSourceIngestionStatus, type SourceIngestionStatus } from "@/components/context-panel/source-ingestion-status";
+import { buildSourceGroundedPipelineStatus, type PipelineStageStatus } from "@/lib/future/pipeline-status";
 
 interface SourceTabProps {
   source: SourceDocument;
   segments: SourceSegment[];
+  localBrief: DeterministicBrief | null;
   activeSegmentId: string;
   labelledBy: string;
   panelId: string;
@@ -35,6 +38,7 @@ interface SourceTabProps {
 export function SourceTab({
   source,
   segments,
+  localBrief,
   activeSegmentId,
   labelledBy,
   panelId,
@@ -270,6 +274,7 @@ export function SourceTab({
   const futureProviders = sourceProviders.filter((provider) => provider.availability === "placeholder");
   const durationLabel = source.durationSeconds ? formatDuration(source.durationSeconds) : source.type.toUpperCase();
   const sourceLanguageLabel = source.sourceLanguage === "ko" ? "한국어 · Korean" : "English";
+  const pipelineStatus = buildSourceGroundedPipelineStatus({ source, localBrief });
 
   return (
     <div className="context-tab-body" role="tabpanel" id={panelId} aria-labelledby={labelledBy}>
@@ -301,6 +306,14 @@ export function SourceTab({
           <dd>{durationLabel}</dd>
         </div>
       </dl>
+      <section className="pipeline-status-panel" aria-label="Source-grounded pipeline status">
+        <strong>{pipelineStatus.chainLabel}</strong>
+        <ul>
+          {pipelineStatus.stages.map((stage) => (
+            <PipelineStatusRow key={stage.id} stage={stage} />
+          ))}
+        </ul>
+      </section>
       <form className="source-ingest-form" noValidate onSubmit={handleSubmit}>
         <label htmlFor={`${panelId}-source-url`}>Try source URL</label>
         <div className="source-ingest-row">
@@ -472,6 +485,16 @@ export function SourceTab({
         onActiveSegmentChange={onActiveSegmentChange}
       />
     </div>
+  );
+}
+
+function PipelineStatusRow({ stage }: { stage: PipelineStageStatus }) {
+  return (
+    <li className={`pipeline-status-row pipeline-status-row--${stage.tone}`}>
+      <span>
+        {stage.label}: {stage.value}
+      </span>
+    </li>
   );
 }
 

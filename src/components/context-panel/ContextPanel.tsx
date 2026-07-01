@@ -1,6 +1,7 @@
 import type {
   AssistantMessage,
   AssistantPrompt,
+  DeterministicBrief,
   HighlightItem,
   ManualTranscriptInput,
   PdfSourceInput,
@@ -24,6 +25,7 @@ interface ContextPanelProps {
   segments: SourceSegment[];
   activeSegmentId: string;
   showTranslation: boolean;
+  localBrief: DeterministicBrief | null;
   assistantMessages: AssistantMessage[];
   assistantPrompts: AssistantPrompt[];
   assistantDraft: string;
@@ -53,6 +55,7 @@ export function ContextPanel({
   segments,
   activeSegmentId,
   showTranslation,
+  localBrief,
   assistantMessages,
   assistantPrompts,
   assistantDraft,
@@ -126,6 +129,7 @@ export function ContextPanel({
           segments={segments}
           showTranslation={showTranslation}
           source={source}
+          localBrief={localBrief}
           onActiveSegmentChange={onActiveSegmentChange}
           onIngestSourceUrl={onIngestSourceUrl}
           onUseManualTranscript={onUseManualTranscript}

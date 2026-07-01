@@ -128,6 +128,14 @@ test("desktop workspace generates and resets a local deterministic brief", async
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
 
+  const sourcePanel = page.getByRole("tabpanel", { name: "Source" });
+  const pipeline = sourcePanel.getByRole("region", { name: "Source-grounded pipeline status" });
+  await expect(pipeline.getByText("Source provider → Generation provider → Citation audit → Policy gate")).toBeVisible();
+  await expect(pipeline.getByText("Source: Mock YouTube Transcript · demo")).toBeVisible();
+  await expect(pipeline.getByText("Generation: not generated yet")).toBeVisible();
+  await expect(pipeline.getByText("Citation audit: pending")).toBeVisible();
+  await expect(pipeline.getByText("Policy gate: pending")).toBeVisible();
+
   await page.getByRole("button", { name: "Generate local brief" }).click();
   const brief = page.getByRole("region", { name: "Local source-grounded brief" });
   await expect(brief).toBeVisible();
@@ -138,14 +146,20 @@ test("desktop workspace generates and resets a local deterministic brief", async
   await expect(brief.getByText("Evidence cards")).toBeVisible();
   await expect(brief.getByText("Brief blocks")).toBeVisible();
   await expect(brief.getByRole("link", { name: "Citation 1" }).first()).toBeVisible();
+  await expect(pipeline.getByText("Generation: Local Deterministic Brief · demo")).toBeVisible();
+  await expect(pipeline.getByText("Citation audit: passed")).toBeVisible();
+  await expect(pipeline.getByText("Policy gate: allowed")).toBeVisible();
   await expect(page.getByText(/AI confidence/i)).toHaveCount(0);
 
-  const sourcePanel = page.getByRole("tabpanel", { name: "Source" });
   await sourcePanel.getByLabel("Mock webpage URL").fill("https://example.com/articles/local-brief-reset");
   await sourcePanel.getByLabel("Mock webpage title").fill("Local Brief Reset");
   await sourcePanel.getByRole("button", { name: "Use mock webpage" }).click();
   await expect(sourcePanel.getByText("Ready. Mock Webpage loaded 3 segments with 3 citations.")).toBeVisible();
   await expect(page.getByRole("region", { name: "Local source-grounded brief" })).toHaveCount(0);
+  await expect(pipeline.getByText("Source: Mock Webpage · demo")).toBeVisible();
+  await expect(pipeline.getByText("Generation: not generated yet")).toBeVisible();
+  await expect(pipeline.getByText("Citation audit: pending")).toBeVisible();
+  await expect(pipeline.getByText("Policy gate: pending")).toBeVisible();
 
   await page.getByRole("button", { name: "Generate local brief" }).click();
   const regeneratedBrief = page.getByRole("region", { name: "Local source-grounded brief" });

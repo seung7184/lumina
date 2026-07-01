@@ -1490,10 +1490,59 @@ dd {
   font-size: 13px;
 }
 
+.pipeline-status-panel {
+  display: grid;
+  gap: 9px;
+  margin-top: 14px;
+  border-top: 1px solid var(--p-line);
+  border-bottom: 1px solid var(--p-line);
+  padding: 12px 0;
+}
+
+.pipeline-status-panel strong {
+  color: var(--p-ink-soft);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.pipeline-status-panel ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pipeline-status-row {
+  border-left: 2px solid var(--p-line-strong);
+  padding-left: 9px;
+}
+
+.pipeline-status-row span {
+  color: var(--p-text-muted);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.pipeline-status-row--ready,
+.pipeline-status-row--passed,
+.pipeline-status-row--allowed {
+  border-left-color: var(--p-teal);
+}
+
+.pipeline-status-row--warning {
+  border-left-color: var(--p-amber);
+}
+
+.pipeline-status-row--blocked {
+  border-left-color: var(--p-coral);
+}
+
 .source-ingest-form {
   display: grid;
   gap: 7px;
-  margin-top: 14px;
   border-bottom: 1px solid var(--p-line);
   padding-bottom: 14px;
 }

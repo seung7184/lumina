@@ -383,6 +383,7 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
         assistantPrompts={workspace.assistantPrompts}
         assistantScope={assistantScope}
         highlights={workspace.highlights}
+        localBrief={localBrief}
         responseMode={responseMode}
         segments={workspace.segments}
         showTranslation={showTranslation}
@@ -441,6 +442,7 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
               assistantScope={assistantScope}
               highlights={workspace.highlights}
               idBase="context-drawer"
+              localBrief={localBrief}
               responseMode={responseMode}
               segments={workspace.segments}
               showTranslation={showTranslation}
