@@ -1,0 +1,109 @@
+import { Download, Eye, Grid2X2, Link2, Share2 } from "lucide-react";
+import type { ExportOptions, LanguageCode } from "@/lib/types/workspace";
+import { labels } from "@/lib/i18n/labels";
+import { ExportMenu } from "@/components/export/ExportMenu";
+
+interface DocumentToolbarProps {
+  language: LanguageCode;
+  mode: "summary" | "expand";
+  length: "short" | "base" | "long";
+  difficulty: "easy" | "standard" | "expert";
+  visualsEnabled: boolean;
+  exportOpen: boolean;
+  exportOptions: ExportOptions;
+  onLanguageChange: (language: LanguageCode) => void;
+  onModeChange: (mode: "summary" | "expand") => void;
+  onLengthChange: (length: "short" | "base" | "long") => void;
+  onDifficultyChange: (difficulty: "easy" | "standard" | "expert") => void;
+  onVisualsToggle: () => void;
+  onExportToggle: () => void;
+  onExportOptionsChange: (options: ExportOptions) => void;
+}
+
+export function DocumentToolbar({
+  language,
+  mode,
+  length,
+  difficulty,
+  visualsEnabled,
+  exportOpen,
+  exportOptions,
+  onLanguageChange,
+  onModeChange,
+  onLengthChange,
+  onDifficultyChange,
+  onVisualsToggle,
+  onExportToggle,
+  onExportOptionsChange,
+}: DocumentToolbarProps) {
+  const copy = labels[language];
+
+  return (
+    <div className="document-toolbar" role="toolbar" aria-label="Document controls">
+      <div className="segmented" role="group" aria-label="View mode">
+        <button className={mode === "summary" ? "is-active" : ""} type="button" onClick={() => onModeChange("summary")}>
+          {copy.summary}
+        </button>
+        <button className={mode === "expand" ? "is-active" : ""} type="button" onClick={() => onModeChange("expand")}>
+          {copy.expand}
+        </button>
+      </div>
+      <div className="segmented" role="group" aria-label="Length">
+        {(["short", "base", "long"] as const).map((item) => (
+          <button className={length === item ? "is-active" : ""} key={item} type="button" onClick={() => onLengthChange(item)}>
+            {copy[item]}
+          </button>
+        ))}
+      </div>
+      <div className="segmented" role="group" aria-label="Reading level">
+        {(["easy", "standard", "expert"] as const).map((item) => (
+          <button
+            className={difficulty === item ? "is-active" : ""}
+            key={item}
+            type="button"
+            onClick={() => onDifficultyChange(item)}
+          >
+            {copy[item]}
+          </button>
+        ))}
+      </div>
+      <span className="toolbar-spacer" />
+      <div className="segmented segmented--language" role="group" aria-label="Toolbar language">
+        <button className={language === "en" ? "is-active" : ""} type="button" onClick={() => onLanguageChange("en")}>
+          EN
+        </button>
+        <button className={language === "ko" ? "is-active" : ""} type="button" onClick={() => onLanguageChange("ko")}>
+          KR
+        </button>
+      </div>
+      <button
+        className={`icon-button ${visualsEnabled ? "is-active" : ""}`}
+        type="button"
+        aria-pressed={visualsEnabled}
+        aria-label="Toggle visual blocks"
+        onClick={onVisualsToggle}
+        title="Visual blocks"
+      >
+        <Grid2X2 size={16} aria-hidden="true" />
+      </button>
+      <button className="icon-button is-active" type="button" aria-label="Citation links" title="Citation links">
+        <Link2 size={16} aria-hidden="true" />
+      </button>
+      <div className="export-anchor">
+        <button className="toolbar-export" type="button" onClick={onExportToggle} aria-expanded={exportOpen}>
+          <Download size={15} aria-hidden="true" />
+          Export
+        </button>
+        {exportOpen ? (
+          <ExportMenu options={exportOptions} onChange={onExportOptionsChange} onClose={onExportToggle} />
+        ) : null}
+      </div>
+      <button className="icon-button" type="button" aria-label="Preview reading view" title="Preview reading view">
+        <Eye size={16} aria-hidden="true" />
+      </button>
+      <button className="icon-button" type="button" aria-label="Share" title="Share">
+        <Share2 size={16} aria-hidden="true" />
+      </button>
+    </div>
+  );
+}

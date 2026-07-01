@@ -1,0 +1,85 @@
+import type {
+  AssistantMessage,
+  AssistantPrompt,
+  HighlightItem,
+  SourceDocument,
+  SourceSegment,
+} from "@/lib/types/workspace";
+import { AssistantTab } from "@/components/context-panel/AssistantTab";
+import { HighlightTab } from "@/components/context-panel/HighlightTab";
+import { SourceTab } from "@/components/context-panel/SourceTab";
+
+interface ContextPanelProps {
+  activeTab: "source" | "assistant" | "highlight";
+  source: SourceDocument;
+  segments: SourceSegment[];
+  activeSegmentId: string;
+  showTranslation: boolean;
+  assistantMessages: AssistantMessage[];
+  assistantPrompts: AssistantPrompt[];
+  highlights: HighlightItem[];
+  assistantScope: "source" | "collection" | "web_source";
+  responseMode: string;
+  onTabChange: (tab: "source" | "assistant" | "highlight") => void;
+  onActiveSegmentChange: (id: string) => void;
+  onTranslationToggle: () => void;
+  onAssistantScopeChange: (scope: "source" | "collection" | "web_source") => void;
+  onResponseModeChange: (mode: string) => void;
+}
+
+export function ContextPanel({
+  activeTab,
+  source,
+  segments,
+  activeSegmentId,
+  showTranslation,
+  assistantMessages,
+  assistantPrompts,
+  highlights,
+  assistantScope,
+  responseMode,
+  onTabChange,
+  onActiveSegmentChange,
+  onTranslationToggle,
+  onAssistantScopeChange,
+  onResponseModeChange,
+}: ContextPanelProps) {
+  return (
+    <aside className="context-panel" aria-label="Context panel">
+      <div className="context-tabs" aria-label="Context panel tabs">
+        {(["source", "assistant", "highlight"] as const).map((tab) => (
+          <button
+            aria-pressed={activeTab === tab}
+            className={activeTab === tab ? "is-active" : ""}
+            key={tab}
+            type="button"
+            onClick={() => onTabChange(tab)}
+          >
+            {tab[0].toUpperCase() + tab.slice(1)}
+          </button>
+        ))}
+      </div>
+      {activeTab === "source" ? (
+        <SourceTab
+          activeSegmentId={activeSegmentId}
+          segments={segments}
+          showTranslation={showTranslation}
+          source={source}
+          onActiveSegmentChange={onActiveSegmentChange}
+          onTranslationToggle={onTranslationToggle}
+        />
+      ) : null}
+      {activeTab === "assistant" ? (
+        <AssistantTab
+          messages={assistantMessages}
+          prompts={assistantPrompts}
+          responseMode={responseMode}
+          scope={assistantScope}
+          onResponseModeChange={onResponseModeChange}
+          onScopeChange={onAssistantScopeChange}
+        />
+      ) : null}
+      {activeTab === "highlight" ? <HighlightTab highlights={highlights} /> : null}
+    </aside>
+  );
+}
