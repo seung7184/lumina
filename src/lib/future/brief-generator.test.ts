@@ -81,6 +81,13 @@ describe("generateDeterministicBrief", () => {
         severity: "info",
       }),
     ]);
+    expect(first.review).toMatchObject({
+      id: "review-brief-src-test-local-deterministic",
+      briefId: "brief-src-test-local-deterministic",
+      status: "needs_review",
+      canApprove: true,
+      sourceGrounded: true,
+    });
     expect(first.evidenceCards).toHaveLength(2);
     expect(first.evidenceCards[0]).toMatchObject({
       id: "evidence-src-test-seg-1",

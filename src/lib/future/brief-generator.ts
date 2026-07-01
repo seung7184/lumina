@@ -10,6 +10,7 @@ import type {
 import { auditGeneratedBriefCitationContract } from "@/lib/future/citation-audit";
 import { evaluateGenerationPolicy } from "@/lib/future/generation-policy-gate";
 import { getActiveGenerationProvider } from "@/lib/future/generation-provider-registry";
+import { createInitialGenerationReview } from "@/lib/future/generation-review";
 
 export interface GenerateDeterministicBriefInput {
   source: SourceDocument;
@@ -86,9 +87,14 @@ export function generateDeterministicBrief(input: GenerateDeterministicBriefInpu
     provider,
   });
 
-  return {
+  const policyCheckedBrief = {
     ...auditedBrief,
     generationPolicy,
+  };
+
+  return {
+    ...policyCheckedBrief,
+    review: createInitialGenerationReview(policyCheckedBrief),
   };
 }
 

@@ -288,6 +288,17 @@ export interface GeneratedBriefSourceBinding {
   status: "bound-to-active-source";
 }
 
+export type GenerationReviewStatus = "draft" | "needs_review" | "approved" | "rejected";
+
+export interface GenerationReviewState {
+  id: string;
+  briefId: string;
+  status: GenerationReviewStatus;
+  reviewerNote: string;
+  canApprove: boolean;
+  sourceGrounded: boolean;
+}
+
 export interface DeterministicBrief {
   id: string;
   sourceId: string;
@@ -304,6 +315,7 @@ export interface DeterministicBrief {
   citationAudit?: CitationAuditResult;
   generationPolicy?: GenerationPolicyResult;
   sourceBinding?: GeneratedBriefSourceBinding;
+  review?: GenerationReviewState;
 }
 
 export interface IngestionResult {

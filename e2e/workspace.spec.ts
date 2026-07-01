@@ -146,6 +146,13 @@ test("desktop workspace generates and resets a local deterministic brief", async
   await expect(brief.getByText("Provider: Local Deterministic Brief · demo · No AI model used")).toBeVisible();
   await expect(brief.getByText("Citation audit: passed · 0 errors · 0 warnings")).toBeVisible();
   await expect(brief.getByText("Generation policy: allowed · source-grounded display enabled")).toBeVisible();
+  await expect(brief.getByText("Manual review: needs review · source-grounded: yes")).toBeVisible();
+  await expect(brief.getByRole("button", { name: "Approve locally" })).toBeEnabled();
+  await brief.getByRole("button", { name: "Approve locally" }).click();
+  await expect(brief.getByText("Manual review: approved · source-grounded: yes")).toBeVisible();
+  await brief.getByRole("button", { name: "Reject locally" }).click();
+  await expect(brief.getByText("Manual review: rejected · source-grounded: yes")).toBeVisible();
+  await expect(page.getByText(/production/i)).toHaveCount(0);
   await expect(brief.getByText("Evidence cards")).toBeVisible();
   await expect(brief.getByText("Brief blocks")).toBeVisible();
   await expect(brief.getByRole("button", { name: "Copy brief Markdown" })).toBeVisible();

@@ -37,6 +37,12 @@ import { ingestMockWebpageSource } from "@/lib/future/ingestion-web";
 import { generateDeterministicBrief } from "@/lib/future/brief-generator";
 import { exportEvidenceCardsMarkdown, exportLocalBriefMarkdown } from "@/lib/future/brief-markdown-export";
 import {
+  approveGenerationReview,
+  createInitialGenerationReview,
+  rejectGenerationReview,
+  resetGenerationReviewForSourceChange,
+} from "@/lib/future/generation-review";
+import {
   addSourceReferenceToCollection,
   buildGeneratedBriefSourceBinding,
   createResearchCollectionFromSource,
@@ -211,11 +217,36 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
       citations: summary.citations,
     });
 
-    setLocalBrief({
+    const boundBrief = {
       ...brief,
       sourceBinding: buildGeneratedBriefSourceBinding(researchCollection, workspace.source),
+    };
+
+    setLocalBrief({
+      ...boundBrief,
+      review: createInitialGenerationReview(boundBrief),
     });
     announce(`Local source-grounded brief generated with ${brief.evidenceCards.length} evidence cards.`);
+  }
+
+  function handleApproveLocalBrief() {
+    if (!localBrief) {
+      return;
+    }
+
+    const review = approveGenerationReview({ brief: localBrief, note: "Approved locally after manual review." });
+    setLocalBrief({ ...localBrief, review });
+    announce(review.status === "approved" ? "Local brief approved for review use." : "Approval unavailable while policy blocks display.");
+  }
+
+  function handleRejectLocalBrief() {
+    if (!localBrief) {
+      return;
+    }
+
+    const review = rejectGenerationReview({ brief: localBrief, note: "Rejected locally for another pass." });
+    setLocalBrief({ ...localBrief, review });
+    announce("Local brief marked rejected for another pass.");
   }
 
   async function handleCopyLocalBriefMarkdown() {
@@ -357,7 +388,7 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
   }
 
   function applyIngestionResult(source: SourceDocument, segments: SourceSegment[], citations: CitationRef[]) {
-    setLocalBrief(null);
+    setLocalBrief(resetGenerationReviewForSourceChange());
     setResearchCollection((current) =>
       setActiveCollectionSource(
         addSourceReferenceToCollection(current, {
@@ -434,6 +465,8 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
           onGenerateLocalBrief={handleGenerateLocalBrief}
           onLanguageChange={setLanguage}
           onMockAction={announce}
+          onApproveLocalBrief={handleApproveLocalBrief}
+          onRejectLocalBrief={handleRejectLocalBrief}
           onReportModeChange={setActiveModeId}
         />
       </main>
