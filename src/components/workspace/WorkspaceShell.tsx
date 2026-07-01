@@ -10,9 +10,11 @@ import type {
   LanguageCode,
   LuminaDemoWorkspace,
   ManualTranscriptInput,
+  PdfSourceInput,
   ReportMode,
   SourceDocument,
   SourceSegment,
+  WebpageSourceInput,
 } from "@/lib/types/workspace";
 import type { SourceIngestionStatus } from "@/components/context-panel/source-ingestion-status";
 import { ContextPanel } from "@/components/context-panel/ContextPanel";
@@ -28,6 +30,8 @@ import {
   ingestYouTubeSource,
   isIngestionError,
 } from "@/lib/future/ingestion-youtube";
+import { ingestMockPdfSource } from "@/lib/future/ingestion-pdf";
+import { ingestMockWebpageSource } from "@/lib/future/ingestion-web";
 
 interface WorkspaceShellProps {
   demo: LuminaDemoWorkspace;
@@ -246,6 +250,48 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
     }
   }
 
+  async function handleUseMockWebpage(input: WebpageSourceInput): Promise<SourceIngestionStatus> {
+    try {
+      const result = ingestMockWebpageSource(input);
+      const source = buildSourceDocumentFromMetadata(result.sourceMetadata, result.segments);
+      const segments = buildWorkspaceSegmentsFromNormalized(result.segments);
+      const citations = buildWorkspaceCitationRefsFromSegments(result.segments);
+
+      applyIngestionResult(source, segments, citations);
+
+      return buildReadyStatus(source, segments.length, citations.length, result.warnings);
+    } catch (error) {
+      return {
+        phase: "error",
+        label: "Error",
+        message: isIngestionError(error) && error.code === "INVALID_URL" ? "Enter a valid webpage URL." : formatIngestionError(error),
+        providerName: "Mock Webpage",
+        providerReliability: "demo",
+      };
+    }
+  }
+
+  async function handleUseMockPdf(input: PdfSourceInput): Promise<SourceIngestionStatus> {
+    try {
+      const result = ingestMockPdfSource(input);
+      const source = buildSourceDocumentFromMetadata(result.sourceMetadata, result.segments);
+      const segments = buildWorkspaceSegmentsFromNormalized(result.segments);
+      const citations = buildWorkspaceCitationRefsFromSegments(result.segments);
+
+      applyIngestionResult(source, segments, citations);
+
+      return buildReadyStatus(source, segments.length, citations.length, result.warnings);
+    } catch (error) {
+      return {
+        phase: "error",
+        label: "Error",
+        message: formatIngestionError(error),
+        providerName: "Mock PDF",
+        providerReliability: "demo",
+      };
+    }
+  }
+
   function applyIngestionResult(source: SourceDocument, segments: SourceSegment[], citations: CitationRef[]) {
     setWorkspace((current) => ({
       ...current,
@@ -327,6 +373,8 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
         onActiveSegmentChange={setActiveSegmentId}
         onIngestSourceUrl={handleIngestSourceUrl}
         onUseManualTranscript={handleUseManualTranscript}
+        onUseMockWebpage={handleUseMockWebpage}
+        onUseMockPdf={handleUseMockPdf}
         onAssistantScopeChange={setAssistantScope}
         onAssistantDraftChange={setAssistantDraft}
         onAssistantSend={handleAssistantSend}
@@ -383,6 +431,8 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
               onActiveSegmentChange={setActiveSegmentId}
               onIngestSourceUrl={handleIngestSourceUrl}
               onUseManualTranscript={handleUseManualTranscript}
+              onUseMockWebpage={handleUseMockWebpage}
+              onUseMockPdf={handleUseMockPdf}
               onAssistantScopeChange={setAssistantScope}
               onAssistantDraftChange={setAssistantDraft}
               onAssistantSend={handleAssistantSend}
@@ -409,6 +459,10 @@ function mergeCitationRefs(existing: CitationRef[], incoming: CitationRef[]) {
 }
 
 function formatIngestionWarning(warning: IngestionWarning) {
+  if (warning.code === "MOCK_PDF_BOUNDARY") {
+    return warning.message;
+  }
+
   if (warning.code === "EMPTY_TRANSCRIPT") {
     return warning.message.includes("Manual transcript")
       ? "Manual transcript did not contain any usable segments."
@@ -454,4 +508,22 @@ function formatIngestionError(error: unknown) {
   }
 
   return error.message;
+}
+
+function buildReadyStatus(
+  source: SourceDocument,
+  segmentCount: number,
+  citationCount: number,
+  warnings: IngestionWarning[],
+): SourceIngestionStatus {
+  return {
+    phase: "ready",
+    label: "Ready",
+    message: `Ready. ${source.providerName ?? "Mock source"} loaded ${segmentCount} segments with ${citationCount} citations.`,
+    providerName: source.providerName,
+    providerReliability: source.providerReliability,
+    segmentCount,
+    citationCount,
+    warnings: warnings.map(formatIngestionWarning),
+  };
 }

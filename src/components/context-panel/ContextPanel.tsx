@@ -3,8 +3,10 @@ import type {
   AssistantPrompt,
   HighlightItem,
   ManualTranscriptInput,
+  PdfSourceInput,
   SourceDocument,
   SourceSegment,
+  WebpageSourceInput,
 } from "@/lib/types/workspace";
 import type { KeyboardEvent } from "react";
 import { AssistantTab } from "@/components/context-panel/AssistantTab";
@@ -33,6 +35,8 @@ interface ContextPanelProps {
   onActiveSegmentChange: (id: string) => void;
   onIngestSourceUrl?: (url: string) => Promise<SourceIngestionStatus>;
   onUseManualTranscript?: (input: ManualTranscriptInput) => Promise<SourceIngestionStatus>;
+  onUseMockWebpage?: (input: WebpageSourceInput) => Promise<SourceIngestionStatus>;
+  onUseMockPdf?: (input: PdfSourceInput) => Promise<SourceIngestionStatus>;
   onTranslationToggle: () => void;
   onAssistantScopeChange: (scope: "source" | "collection" | "web_source") => void;
   onAssistantDraftChange: (draft: string) => void;
@@ -60,6 +64,8 @@ export function ContextPanel({
   onActiveSegmentChange,
   onIngestSourceUrl,
   onUseManualTranscript,
+  onUseMockWebpage,
+  onUseMockPdf,
   onTranslationToggle,
   onAssistantScopeChange,
   onAssistantDraftChange,
@@ -123,6 +129,8 @@ export function ContextPanel({
           onActiveSegmentChange={onActiveSegmentChange}
           onIngestSourceUrl={onIngestSourceUrl}
           onUseManualTranscript={onUseManualTranscript}
+          onUseMockWebpage={onUseMockWebpage}
+          onUseMockPdf={onUseMockPdf}
           onMockAction={onMockAction}
           onTranslationToggle={onTranslationToggle}
         />

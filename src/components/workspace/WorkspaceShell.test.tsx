@@ -135,4 +135,46 @@ describe("WorkspaceShell", () => {
     expect(within(sourcePanel).getByText("First pasted line")).toBeInTheDocument();
     expect(screen.getByText("AI literacy creates widening outcomes")).toBeInTheDocument();
   });
+
+  it("loads a deterministic mock webpage boundary from the Source tab", async () => {
+    render(<WorkspaceShell demo={luminaDemo} />);
+
+    const sourcePanel = screen.getByRole("tabpanel", { name: /Source/i });
+
+    fireEvent.click(within(sourcePanel).getByRole("button", { name: "Use mock webpage" }));
+    expect(await within(sourcePanel).findByText("Enter a webpage URL first.")).toBeInTheDocument();
+
+    fireEvent.change(within(sourcePanel).getByLabelText("Mock webpage URL"), {
+      target: { value: "https://example.com/articles/lumina-boundary" },
+    });
+    fireEvent.change(within(sourcePanel).getByLabelText("Mock webpage title"), {
+      target: { value: "Lumina Boundary Notes" },
+    });
+    fireEvent.click(within(sourcePanel).getByRole("button", { name: "Use mock webpage" }));
+
+    expect(await within(sourcePanel).findByText("Ready. Mock Webpage loaded 3 segments with 3 citations.")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("Provider: Mock Webpage · demo reliability")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("Segments: 3")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("Citations: 3")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("This mock webpage boundary represents a future article source without fetching the live page.")).toBeInTheDocument();
+    expect(screen.getByText("AI literacy creates widening outcomes")).toBeInTheDocument();
+  });
+
+  it("loads a deterministic mock PDF boundary from the Source tab with warnings", async () => {
+    render(<WorkspaceShell demo={luminaDemo} />);
+
+    const sourcePanel = screen.getByRole("tabpanel", { name: /Source/i });
+
+    fireEvent.change(within(sourcePanel).getByLabelText("Mock PDF filename"), {
+      target: { value: "lumina-boundary.pdf" },
+    });
+    fireEvent.click(within(sourcePanel).getByRole("button", { name: "Use mock PDF" }));
+
+    expect(await within(sourcePanel).findByText("Ready. Mock PDF loaded 3 segments with 3 citations.")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("Provider: Mock PDF · demo reliability")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("Segments: 3")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("Citations: 3")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("Mock PDF boundary only; no PDF bytes were parsed.")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("This mock PDF boundary represents a future uploaded or linked document source.")).toBeInTheDocument();
+  });
 });

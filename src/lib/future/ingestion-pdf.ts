@@ -1,20 +1,104 @@
-import type { SourceDocument, SourceSegment } from "@/lib/types/workspace";
+import type {
+  IngestionResult,
+  NormalizedSourceSegment,
+  PdfSourceInput,
+  SegmentCitationRef,
+  SourceMetadata,
+} from "@/lib/types/workspace";
 
-export interface PdfIngestionInput {
-  fileName: string;
-  fileBytes: ArrayBuffer;
-  languageHint?: string;
+const mockPdfProviderId = "mock-pdf";
+const mockPdfProviderName = "Mock PDF";
+
+export interface PdfIngestionProvider {
+  id?: string;
+  name: string;
+  ingest(input: PdfSourceInput): Promise<IngestionResult> | IngestionResult;
 }
 
-export interface PdfIngestionResult {
-  source: SourceDocument;
-  segments: SourceSegment[];
-  pageImages?: Array<{ pageNumber: number; imageUrl: string }>;
+export function ingestMockPdfSource(input: PdfSourceInput): IngestionResult {
+  const canonicalUrl = input.url?.trim() || input.filename?.trim() || "mock-source.pdf";
+  const title = input.title?.trim() || input.filename?.trim() || "Mock PDF source";
+  const sourceMetadata: SourceMetadata = {
+    sourceId: `src-pdf-${buildStableSourceSlug(canonicalUrl)}`,
+    kind: "pdf",
+    title,
+    language: input.language ?? "en",
+    canonicalUrl,
+    providerId: mockPdfProviderId,
+    providerName: mockPdfProviderName,
+    providerReliability: "demo",
+  };
+  const segments = buildMockPdfSegments(sourceMetadata);
+
+  return {
+    sourceMetadata,
+    segments,
+    citations: createCitationRefsFromMockSegments(segments),
+    warnings: [
+      {
+        code: "MOCK_PDF_BOUNDARY",
+        message: "Mock PDF boundary only; no PDF bytes were parsed.",
+        severity: "info",
+      },
+    ],
+  };
 }
 
-export async function ingestPdfSource(_input: PdfIngestionInput): Promise<PdfIngestionResult> {
-  void _input;
-  // TODO: Extract text blocks with page numbers and preserve layout/page-image
-  // references for tables, diagrams, and figure-heavy PDFs.
-  throw new Error("PDF ingestion is not implemented in this front-end slice.");
+export class MockPdfIngestionProvider implements PdfIngestionProvider {
+  id = mockPdfProviderId;
+  name = mockPdfProviderName;
+
+  ingest(input: PdfSourceInput): IngestionResult {
+    return ingestMockPdfSource(input);
+  }
+}
+
+function buildMockPdfSegments(sourceMetadata: SourceMetadata): NormalizedSourceSegment[] {
+  const segmentTexts = [
+    "This mock PDF boundary represents a future uploaded or linked document source.",
+    "The current pass does not parse PDF bytes, extract tables, or run OCR.",
+    "Future PDF extraction should preserve page numbers and citation anchors.",
+  ];
+
+  return segmentTexts.map((text, index) => {
+    const page = index + 1;
+
+    return {
+      id: `seg-${sourceMetadata.sourceId}-${String(index).padStart(3, "0")}`,
+      sourceId: sourceMetadata.sourceId,
+      index,
+      startSeconds: index,
+      displayTime: `Page ${page}`,
+      text,
+      language: sourceMetadata.language ?? "en",
+      citationId: `cite-${sourceMetadata.sourceId}-${String(page).padStart(3, "0")}`,
+      sourceUrl: `${sourceMetadata.canonicalUrl}#page=${page}`,
+      metadata: {
+        mockBoundary: true,
+        page,
+      },
+    };
+  });
+}
+
+function createCitationRefsFromMockSegments(segments: NormalizedSourceSegment[]): SegmentCitationRef[] {
+  return segments.map((segment, index) => ({
+    id: segment.citationId,
+    sourceId: segment.sourceId,
+    segmentId: segment.id,
+    label: `[${index + 1}]`,
+    displayTime: segment.displayTime,
+    url: segment.sourceUrl,
+  }));
+}
+
+function buildStableSourceSlug(value: string) {
+  const slug = value
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64);
+
+  return slug || "mock-source-pdf";
 }

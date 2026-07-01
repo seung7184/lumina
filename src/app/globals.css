@@ -1441,6 +1441,69 @@ dd {
   justify-self: start;
 }
 
+.source-boundary-panel {
+  display: grid;
+  gap: 10px;
+  border-bottom: 1px solid var(--p-line);
+  padding: 14px 0;
+}
+
+.source-boundary-panel > div {
+  display: grid;
+  gap: 3px;
+}
+
+.source-boundary-panel strong {
+  font-size: 12.5px;
+}
+
+.source-boundary-panel p {
+  margin: 0;
+  color: var(--p-text-faint);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.45;
+}
+
+.source-boundary-form {
+  display: grid;
+  gap: 7px;
+  border: 1px solid var(--p-line);
+  border-radius: var(--radius-md);
+  background: var(--p-surface-raised);
+  padding: 10px;
+}
+
+.source-boundary-form label {
+  color: var(--p-text-faint);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.source-boundary-form input {
+  min-width: 0;
+  border: 1px solid var(--p-line);
+  border-radius: var(--radius-md);
+  background: var(--p-paper-deep);
+  color: var(--p-ink);
+  font-size: 12px;
+  padding: 9px 10px;
+}
+
+.source-boundary-form button {
+  justify-self: start;
+  min-height: 32px;
+  border: 1px solid var(--p-line-strong);
+  border-radius: var(--radius-md);
+  background: var(--p-surface);
+  color: var(--p-ink);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0 10px;
+}
+
 .transcript-head,
 .toggle-row {
   display: flex;
