@@ -107,7 +107,7 @@ export function ExportMenu({ language, options, onChange, onClose, onMockAction,
   }
 
   return (
-    <div className="export-menu" role="menu" aria-label="Export options" ref={menuRef}>
+    <div className="export-menu" role="dialog" aria-label="Export options" ref={menuRef}>
       <div className="export-menu__head">
         <strong>{copy.title}</strong>
         <button type="button" onClick={closeMenu} aria-label="Close export menu" ref={closeButtonRef}>

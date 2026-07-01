@@ -13,7 +13,8 @@ describe("WorkspaceShell", () => {
       }),
     ).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: /workspace navigation/i })).toBeInTheDocument();
-    expect(screen.getByRole("main", { name: /research document/i })).toBeInTheDocument();
+    expect(screen.getByRole("main", { name: /workspace document/i })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /research document/i })).toBeInTheDocument();
     expect(screen.getByRole("complementary", { name: /context panel/i })).toBeInTheDocument();
     expect(screen.getByText("AI literacy creates widening outcomes")).toBeInTheDocument();
 
@@ -43,11 +44,11 @@ describe("WorkspaceShell", () => {
     expect(screen.queryByText(/AI knowledge is severely lacking right now/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Export" }));
-    const menu = screen.getByRole("menu", { name: /Export options/i });
-    expect(within(menu).getByText("Markdown")).toBeInTheDocument();
-    fireEvent.click(within(menu).getByRole("radio", { name: /Slides/i }));
-    expect(within(menu).getByRole("radio", { name: /Slides/i })).toBeChecked();
-    fireEvent.click(within(menu).getByRole("button", { name: /링크 복사|Copy link/i }));
+    const exportDialog = screen.getByRole("dialog", { name: /Export options/i });
+    expect(within(exportDialog).getByText("Markdown")).toBeInTheDocument();
+    fireEvent.click(within(exportDialog).getByRole("radio", { name: /Slides/i }));
+    expect(within(exportDialog).getByRole("radio", { name: /Slides/i })).toBeChecked();
+    fireEvent.click(within(exportDialog).getByRole("button", { name: /링크 복사|Copy link/i }));
     expect(screen.getAllByText(/목업 공유 링크를 복사했습니다|Mock share link copied/i).length).toBeGreaterThan(0);
   });
 });

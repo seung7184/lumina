@@ -180,7 +180,7 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
           announce(sidebarCollapsed ? "Navigation expanded." : "Navigation collapsed.");
         }}
       />
-      <section className="workspace-main">
+      <main className="workspace-main" aria-label="Workspace document">
         <DocumentToolbar
           difficulty={difficulty}
           exportOpen={exportOpen}
@@ -209,7 +209,7 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
           onMockAction={announce}
           onReportModeChange={setActiveModeId}
         />
-      </section>
+      </main>
       <ContextPanel
         activeSegmentId={activeSegmentId}
         activeTab={contextTab}
@@ -232,7 +232,7 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
         onTabChange={setContextTab}
         onTranslationToggle={() => setShowTranslation((show) => !show)}
       />
-      <div className="responsive-context-access" aria-label="Context shortcuts">
+      <nav className="responsive-context-access" aria-label="Context shortcuts">
         {(["source", "assistant", "highlight"] as const).map((tab) => (
           <button
             aria-label={`Open ${tab[0].toUpperCase() + tab.slice(1)} context`}
@@ -245,7 +245,7 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
             {tab[0].toUpperCase() + tab.slice(1)}
           </button>
         ))}
-      </div>
+      </nav>
       {contextDrawerOpen ? (
         <div className="context-drawer-layer">
           <button

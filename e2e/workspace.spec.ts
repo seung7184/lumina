@@ -35,11 +35,13 @@ test("desktop workspace loads and core interactions work", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.getByRole("heading", { name: /People Losing Everything/i })).toBeVisible();
+  await expect(page.getByText("AI literacy creates widening outcomes")).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
   await tabUntilFocused(page, "KR");
   await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { name: /AI로 전재산을 날리는 사람들과 시간이 무한해진 사람들/ })).toBeVisible();
+  await expect(page.getByText("AI 문해력이 만드는 결과의 격차")).toBeVisible();
 
   await page.getByRole("tab", { name: "Assistant" }).click();
   await page.getByLabel("Ask anything about this source").fill("What claim needs validation first?");
@@ -50,12 +52,12 @@ test("desktop workspace loads and core interactions work", async ({ page }) => {
   await expect(page.getByText("Key claims")).toBeVisible();
 
   const exportButton = page.getByRole("button", { name: "Export", exact: true });
-  await expect(exportButton).toHaveAttribute("aria-haspopup", "menu");
+  await expect(exportButton).toHaveAttribute("aria-haspopup", "dialog");
   await exportButton.click();
-  await expect(page.getByRole("menu", { name: "Export options" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Export options" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Close export menu" })).toBeFocused();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("menu", { name: "Export options" })).toBeHidden();
+  await expect(page.getByRole("dialog", { name: "Export options" })).toBeHidden();
   await expect(exportButton).toBeFocused();
   await expectNoHorizontalOverflow(page);
   expect(errors).toEqual([]);
