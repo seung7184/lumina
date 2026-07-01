@@ -12,6 +12,8 @@ export interface EvaluateGenerationPolicyInput {
   provider?: GenerationProviderDescriptor;
 }
 
+const uncitedGeneratedOutputAuditCodes = new Set(["MISSING_BRIEF_CITATION", "UNCITED_EVIDENCE_CARD", "UNCITED_BRIEF_BLOCK"]);
+
 interface IssueInput {
   code: GenerationPolicyIssueCode;
   severity: GenerationPolicySeverity;
@@ -67,6 +69,16 @@ export function evaluateGenerationPolicy(input: EvaluateGenerationPolicyInput): 
         code: "CITATION_AUDIT_ERRORS",
         severity: "error",
         message: "Citation audit reported errors.",
+        targetType: "citation-audit",
+        targetId: input.brief.citationAudit.id,
+      });
+    }
+
+    if (input.brief.citationAudit.issues.some((issue) => uncitedGeneratedOutputAuditCodes.has(issue.code))) {
+      addIssue({
+        code: "CITATION_AUDIT_UNCITED_OUTPUT",
+        severity: "error",
+        message: "Citation audit found generated output without citation coverage.",
         targetType: "citation-audit",
         targetId: input.brief.citationAudit.id,
       });
@@ -130,6 +142,33 @@ function evaluateProvider(
       code: "PROVIDER_USES_AI",
       severity: "error",
       message: "Generation provider uses AI and cannot be treated as local deterministic output.",
+      targetType: "provider",
+      targetId: provider.id,
+    });
+  }
+
+  if (
+    provider.requiresNetwork ||
+    provider.requiresApiKey ||
+    provider.requiresModel ||
+    provider.usesEmbeddings ||
+    provider.usesVectorSearch ||
+    provider.storesUserData
+  ) {
+    addIssue({
+      code: "PROVIDER_NOT_LOCAL_ONLY",
+      severity: "error",
+      message: "Generation provider is not local-only.",
+      targetType: "provider",
+      targetId: provider.id,
+    });
+  }
+
+  if (!provider.isDeterministic) {
+    addIssue({
+      code: "PROVIDER_NOT_DETERMINISTIC",
+      severity: "error",
+      message: "Generation provider is not deterministic.",
       targetType: "provider",
       targetId: provider.id,
     });

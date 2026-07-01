@@ -150,6 +150,25 @@ describe("evaluateGenerationPolicy", () => {
     ]);
   });
 
+  it("blocks providers that are not local-only or deterministic", () => {
+    const result = evaluateGenerationPolicy({
+      brief: brief(),
+      provider: provider({
+        requiresNetwork: true,
+        requiresApiKey: true,
+        requiresModel: true,
+        usesEmbeddings: true,
+        usesVectorSearch: true,
+        storesUserData: true,
+        isDeterministic: false,
+      }),
+    });
+
+    expect(result.allowedToDisplay).toBe(false);
+    expect(result.allowedToUseAsSourceGrounded).toBe(false);
+    expect(result.issues.map((issue) => issue.code)).toEqual(["PROVIDER_NOT_LOCAL_ONLY", "PROVIDER_NOT_DETERMINISTIC"]);
+  });
+
   it("blocks missing or failed citation audits", () => {
     const missingAuditResult = evaluateGenerationPolicy({
       brief: brief({ citationAudit: undefined }),
@@ -177,6 +196,46 @@ describe("evaluateGenerationPolicy", () => {
 
     expect(failedAuditResult.allowedToDisplay).toBe(false);
     expect(failedAuditResult.issues.map((issue) => issue.code)).toEqual(["CITATION_AUDIT_FAILED", "CITATION_AUDIT_ERRORS"]);
+  });
+
+  it("blocks uncited generated output even when the citation audit treats it as a warning", () => {
+    const result = evaluateGenerationPolicy({
+      brief: brief({
+        citationAudit: citationAudit({
+          warningCount: 2,
+          issues: [
+            {
+              id: "audit-brief-policy-issue-1",
+              code: "UNCITED_EVIDENCE_CARD",
+              severity: "warning",
+              message: "Generated evidence card has no citation IDs.",
+              targetType: "evidence-card",
+              targetId: "evidence-policy",
+            },
+            {
+              id: "audit-brief-policy-issue-2",
+              code: "UNCITED_BRIEF_BLOCK",
+              severity: "warning",
+              message: "Generated brief block has no citation IDs.",
+              targetType: "brief-block",
+              targetId: "brief-policy-overview",
+            },
+          ],
+        }),
+      }),
+      provider: provider(),
+    });
+
+    expect(result.allowedToDisplay).toBe(false);
+    expect(result.allowedToUseAsSourceGrounded).toBe(false);
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        code: "CITATION_AUDIT_UNCITED_OUTPUT",
+        severity: "error",
+        targetType: "citation-audit",
+        targetId: "audit-brief-policy",
+      }),
+    ]);
   });
 
   it("allows display with a warning for empty generated output", () => {
