@@ -70,6 +70,33 @@ describe("WorkspaceShell", () => {
     expect(within(sourcePanel).getByText("Translation is not available for every segment yet.")).toBeInTheDocument();
   });
 
+  it("renders a read-only provider catalog in the Source tab", () => {
+    render(<WorkspaceShell demo={luminaDemo} />);
+
+    const sourcePanel = screen.getByRole("tabpanel", { name: /Source/i });
+    const catalogToggle = within(sourcePanel).getByRole("button", { name: "View provider catalog" });
+
+    expect(catalogToggle).toHaveAttribute("aria-expanded", "false");
+    expect(within(sourcePanel).queryByText("Future placeholders")).not.toBeInTheDocument();
+
+    fireEvent.click(catalogToggle);
+
+    expect(catalogToggle).toHaveAttribute("aria-expanded", "true");
+    expect(within(sourcePanel).getByRole("region", { name: "Source provider catalog" })).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("Active providers")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("YouTube mock")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("Manual")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("Web mock")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("PDF mock")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("Future placeholders")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("YouTube captions")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("Web extraction")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("PDF extraction")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("PDF OCR")).toBeInTheDocument();
+    expect(within(sourcePanel).getAllByText("Placeholder").length).toBeGreaterThanOrEqual(4);
+    expect(within(sourcePanel).queryByRole("button", { name: "PDF OCR" })).not.toBeInTheDocument();
+  });
+
   it("shows calm Source-tab feedback for unsupported ingestion URLs", async () => {
     render(<WorkspaceShell demo={luminaDemo} />);
 

@@ -6,9 +6,9 @@ import type {
   SourceMetadata,
   WebpageSourceInput,
 } from "@/lib/types/workspace";
+import { getSourceProviderById } from "@/lib/future/ingestion-provider-registry";
 
-const mockWebpageProviderId = "mock-webpage";
-const mockWebpageProviderName = "Mock Webpage";
+const mockWebpageProviderDescriptor = getRequiredMockWebpageProviderDescriptor();
 
 export interface WebpageIngestionProvider {
   id?: string;
@@ -65,9 +65,9 @@ export function ingestMockWebpageSource(input: WebpageSourceInput): IngestionRes
     title,
     language: input.language ?? "en",
     canonicalUrl,
-    providerId: mockWebpageProviderId,
-    providerName: mockWebpageProviderName,
-    providerReliability: "demo",
+    providerId: mockWebpageProviderDescriptor.id,
+    providerName: mockWebpageProviderDescriptor.name,
+    providerReliability: mockWebpageProviderDescriptor.reliability,
   };
   const segments = buildMockWebpageSegments(sourceMetadata);
 
@@ -80,8 +80,8 @@ export function ingestMockWebpageSource(input: WebpageSourceInput): IngestionRes
 }
 
 export class MockWebpageIngestionProvider implements WebpageIngestionProvider {
-  id = mockWebpageProviderId;
-  name = mockWebpageProviderName;
+  id = mockWebpageProviderDescriptor.id;
+  name = mockWebpageProviderDescriptor.name;
 
   ingest(input: WebpageSourceInput): IngestionResult {
     return ingestMockWebpageSource(input);
@@ -135,4 +135,14 @@ function buildStableSourceSlug(value: string) {
     .slice(0, 64);
 
   return slug || "webpage";
+}
+
+function getRequiredMockWebpageProviderDescriptor() {
+  const descriptor = getSourceProviderById("mock-webpage");
+
+  if (!descriptor) {
+    throw new WebpageIngestionException("PROVIDER_UNAVAILABLE", "Mock webpage provider metadata is not configured.");
+  }
+
+  return descriptor;
 }
