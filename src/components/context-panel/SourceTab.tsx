@@ -1,7 +1,13 @@
 import { Copy, Globe2, Play } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
-import type { ManualTranscriptInput, SourceDocument, SourceSegment } from "@/lib/types/workspace";
+import type {
+  ManualTranscriptInput,
+  PdfSourceInput,
+  SourceDocument,
+  SourceSegment,
+  WebpageSourceInput,
+} from "@/lib/types/workspace";
 import { TranscriptList } from "@/components/context-panel/TranscriptList";
 import { idleSourceIngestionStatus, type SourceIngestionStatus } from "@/components/context-panel/source-ingestion-status";
 
@@ -15,6 +21,8 @@ interface SourceTabProps {
   onActiveSegmentChange: (id: string) => void;
   onIngestSourceUrl?: (url: string) => Promise<SourceIngestionStatus>;
   onUseManualTranscript?: (input: ManualTranscriptInput) => Promise<SourceIngestionStatus>;
+  onUseMockWebpage?: (input: WebpageSourceInput) => Promise<SourceIngestionStatus>;
+  onUseMockPdf?: (input: PdfSourceInput) => Promise<SourceIngestionStatus>;
   onMockAction: (message: string) => void;
   onTranslationToggle: () => void;
 }
@@ -29,6 +37,8 @@ export function SourceTab({
   onActiveSegmentChange,
   onIngestSourceUrl,
   onUseManualTranscript,
+  onUseMockWebpage,
+  onUseMockPdf,
   onMockAction,
   onTranslationToggle,
 }: SourceTabProps) {
@@ -162,9 +172,95 @@ export function SourceTab({
     onMockAction(nextStatus.message ?? nextStatus.label);
   }
 
+  async function handleMockWebpageSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const url = String(formData.get("mock-webpage-url") ?? "").trim();
+
+    if (!url) {
+      const nextStatus: SourceIngestionStatus = {
+        phase: "error",
+        label: "Error",
+        message: "Enter a webpage URL first.",
+        providerName: "Mock Webpage",
+        providerReliability: "demo",
+      };
+      setIngestStatus(nextStatus);
+      onMockAction("Enter a webpage URL first.");
+      return;
+    }
+
+    if (!onUseMockWebpage) {
+      const nextStatus: SourceIngestionStatus = {
+        phase: "error",
+        label: "Error",
+        message: "Mock webpage ingestion is not connected in this view.",
+        providerName: "Mock Webpage",
+        providerReliability: "demo",
+      };
+      setIngestStatus(nextStatus);
+      onMockAction("Mock webpage ingestion is not connected in this view.");
+      return;
+    }
+
+    setIngestStatus({
+      phase: "normalizing-segments",
+      label: "Loading mock webpage",
+      message: "Preparing a deterministic webpage boundary locally.",
+      providerName: "Mock Webpage",
+      providerReliability: "demo",
+    });
+
+    const nextStatus = await onUseMockWebpage({
+      kind: "webpage",
+      url,
+      title: String(formData.get("mock-webpage-title") ?? "").trim() || undefined,
+      language: source.sourceLanguage,
+    });
+    setIngestStatus(nextStatus);
+    onMockAction(nextStatus.message ?? nextStatus.label);
+  }
+
+  async function handleMockPdfSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+
+    if (!onUseMockPdf) {
+      const nextStatus: SourceIngestionStatus = {
+        phase: "error",
+        label: "Error",
+        message: "Mock PDF ingestion is not connected in this view.",
+        providerName: "Mock PDF",
+        providerReliability: "demo",
+      };
+      setIngestStatus(nextStatus);
+      onMockAction("Mock PDF ingestion is not connected in this view.");
+      return;
+    }
+
+    setIngestStatus({
+      phase: "normalizing-segments",
+      label: "Loading mock PDF",
+      message: "Preparing a deterministic PDF boundary locally.",
+      providerName: "Mock PDF",
+      providerReliability: "demo",
+    });
+
+    const nextStatus = await onUseMockPdf({
+      kind: "pdf",
+      filename: String(formData.get("mock-pdf-filename") ?? "").trim() || "mock-source.pdf",
+      title: String(formData.get("mock-pdf-title") ?? "").trim() || undefined,
+      language: source.sourceLanguage,
+    });
+    setIngestStatus(nextStatus);
+    onMockAction(nextStatus.message ?? nextStatus.label);
+  }
+
   const providerLine = ingestStatus.providerName
     ? `Provider: ${ingestStatus.providerName} · ${ingestStatus.providerReliability ?? "demo"} reliability`
     : undefined;
+  const durationLabel = source.durationSeconds ? formatDuration(source.durationSeconds) : source.type.toUpperCase();
+  const sourceLanguageLabel = source.sourceLanguage === "ko" ? "한국어 · Korean" : "English";
 
   return (
     <div className="context-tab-body" role="tabpanel" id={panelId} aria-labelledby={labelledBy}>
@@ -173,27 +269,27 @@ export function SourceTab({
         <span className="source-preview__play">
           <Play size={18} fill="currentColor" aria-hidden="true" />
         </span>
-        <span className="source-preview__duration">14:32</span>
+        <span className="source-preview__duration">{durationLabel}</span>
       </div>
       <dl className="source-meta-list">
         <div>
           <dt>Creator</dt>
-          <dd className="ko-copy">{source.creator}</dd>
+          <dd className="ko-copy">{source.creator ?? "Local mock boundary"}</dd>
         </div>
         <div>
           <dt>Published</dt>
-          <dd>{source.publishedAt}</dd>
+          <dd>{source.publishedAt ?? "Not fetched"}</dd>
         </div>
         <div>
           <dt>Language</dt>
           <dd>
             <Globe2 size={13} aria-hidden="true" />
-            한국어 · Korean
+            {sourceLanguageLabel}
           </dd>
         </div>
         <div>
-          <dt>Duration</dt>
-          <dd>14:32</dd>
+          <dt>{source.durationSeconds ? "Duration" : "Type"}</dt>
+          <dd>{durationLabel}</dd>
         </div>
       </dl>
       <form className="source-ingest-form" noValidate onSubmit={handleSubmit}>
@@ -276,6 +372,44 @@ export function SourceTab({
           </form>
         ) : null}
       </section>
+      <section className="source-boundary-panel" aria-label="Other source boundaries">
+        <div>
+          <strong>Try other source boundary</strong>
+          <p>No live webpage fetch or PDF parsing is performed in this pass.</p>
+        </div>
+        <form className="source-boundary-form" noValidate onSubmit={handleMockWebpageSubmit}>
+          <strong>Mock webpage boundary</strong>
+          <label htmlFor={`${panelId}-mock-webpage-url`}>Mock webpage URL</label>
+          <input
+            id={`${panelId}-mock-webpage-url`}
+            name="mock-webpage-url"
+            type="url"
+            inputMode="url"
+            placeholder="https://example.com/articles/lumina-boundary"
+          />
+          <label htmlFor={`${panelId}-mock-webpage-title`}>Mock webpage title</label>
+          <input
+            id={`${panelId}-mock-webpage-title`}
+            name="mock-webpage-title"
+            type="text"
+            placeholder="Lumina Boundary Notes"
+          />
+          <button type="submit">Use mock webpage</button>
+        </form>
+        <form className="source-boundary-form" noValidate onSubmit={handleMockPdfSubmit}>
+          <strong>Mock PDF boundary</strong>
+          <label htmlFor={`${panelId}-mock-pdf-filename`}>Mock PDF filename</label>
+          <input
+            id={`${panelId}-mock-pdf-filename`}
+            name="mock-pdf-filename"
+            type="text"
+            placeholder="mock-source.pdf"
+          />
+          <label htmlFor={`${panelId}-mock-pdf-title`}>Mock PDF title</label>
+          <input id={`${panelId}-mock-pdf-title`} name="mock-pdf-title" type="text" placeholder="Mock PDF source" />
+          <button type="submit">Use mock PDF</button>
+        </form>
+      </section>
       <div className="transcript-head">
         <strong>Transcript</strong>
         <span>{segments.length} segments</span>
@@ -304,4 +438,12 @@ export function SourceTab({
       />
     </div>
   );
+}
+
+function formatDuration(seconds: number) {
+  const totalSeconds = Math.max(0, Math.floor(seconds));
+  const minutes = Math.floor(totalSeconds / 60);
+  const remainingSeconds = totalSeconds % 60;
+
+  return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
 }

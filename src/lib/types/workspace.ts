@@ -73,6 +73,23 @@ export interface YouTubeSourceInput extends IngestionSourceInput {
   url: string;
 }
 
+export interface WebpageSourceInput {
+  kind: "webpage";
+  url: string;
+  title?: string;
+  language?: LanguageCode;
+}
+
+export interface PdfSourceInput {
+  kind: "pdf";
+  url?: string;
+  filename?: string;
+  title?: string;
+  language?: LanguageCode;
+}
+
+export type IngestibleSourceInput = YouTubeSourceInput | WebpageSourceInput | PdfSourceInput | ManualTranscriptInput;
+
 export interface ParsedYouTubeUrl {
   videoId: string;
   canonicalUrl: string;

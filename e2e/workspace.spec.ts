@@ -86,6 +86,33 @@ test("desktop Source tab accepts a local manual transcript paste", async ({ page
   expect(errors).toEqual([]);
 });
 
+test("desktop Source tab loads mock webpage and PDF boundaries", async ({ page }) => {
+  const errors = collectPageErrors(page);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/");
+
+  const sourcePanel = page.getByRole("tabpanel", { name: "Source" });
+
+  await sourcePanel.getByRole("button", { name: "Use mock webpage" }).click();
+  await expect(sourcePanel.getByText("Enter a webpage URL first.")).toBeVisible();
+
+  await sourcePanel.getByLabel("Mock webpage URL").fill("https://example.com/articles/lumina-boundary");
+  await sourcePanel.getByLabel("Mock webpage title").fill("Lumina Boundary Notes");
+  await sourcePanel.getByRole("button", { name: "Use mock webpage" }).click();
+  await expect(sourcePanel.getByText("Ready. Mock Webpage loaded 3 segments with 3 citations.")).toBeVisible();
+  await expect(sourcePanel.getByText("Segments: 3")).toBeVisible();
+  await expect(sourcePanel.getByText("Citations: 3")).toBeVisible();
+  await expect(sourcePanel.getByText("This mock webpage boundary represents a future article source without fetching the live page.")).toBeVisible();
+
+  await sourcePanel.getByLabel("Mock PDF filename").fill("lumina-boundary.pdf");
+  await sourcePanel.getByRole("button", { name: "Use mock PDF" }).click();
+  await expect(sourcePanel.getByText("Ready. Mock PDF loaded 3 segments with 3 citations.")).toBeVisible();
+  await expect(sourcePanel.getByText("Mock PDF boundary only; no PDF bytes were parsed.")).toBeVisible();
+  await expect(sourcePanel.getByText("This mock PDF boundary represents a future uploaded or linked document source.")).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  expect(errors).toEqual([]);
+});
+
 test("tablet context drawer opens Source, Assistant, and Highlight without scrolling to document bottom", async ({ page }) => {
   const errors = collectPageErrors(page);
   await page.setViewportSize({ width: 1024, height: 900 });
