@@ -4,6 +4,7 @@ import type {
   DeterministicBrief,
   DocumentBlock,
   EvidenceCard,
+  GenerationPolicyResult,
   LanguageCode,
   ReportMode,
   SourceDocument,
@@ -85,6 +86,8 @@ function LocalBriefSection({
   brief: DeterministicBrief;
   citationMap: Map<string, SummaryDocument["citations"][number]>;
 }) {
+  const isPolicyBlocked = brief.generationPolicy?.allowedToDisplay === false;
+
   return (
     <section className="local-brief" aria-label="Local source-grounded brief">
       <header className="local-brief__header">
@@ -97,6 +100,7 @@ function LocalBriefSection({
           </p>
         ) : null}
         {brief.citationAudit ? <CitationAuditStatus audit={brief.citationAudit} /> : null}
+        {brief.generationPolicy ? <GenerationPolicyStatus policy={brief.generationPolicy} /> : null}
       </header>
       {brief.warnings.length ? (
         <ul className="local-brief__warnings" aria-label="Local brief warnings">
@@ -105,20 +109,26 @@ function LocalBriefSection({
           ))}
         </ul>
       ) : null}
-      <div className="local-brief__grid">
-        <section className="local-brief__group" aria-label="Evidence cards">
-          <h3>Evidence cards</h3>
-          {brief.evidenceCards.map((card) => (
-            <EvidenceCardView card={card} citationMap={citationMap} key={card.id} />
-          ))}
-        </section>
-        <section className="local-brief__group" aria-label="Brief blocks">
-          <h3>Brief blocks</h3>
-          {brief.blocks.map((block) => (
-            <BriefBlockView block={block} citationMap={citationMap} key={block.id} />
-          ))}
-        </section>
-      </div>
+      {isPolicyBlocked ? (
+        <div className="local-brief__blocked">
+          <p>Generated output is blocked by policy until citation/provider issues are resolved.</p>
+        </div>
+      ) : (
+        <div className="local-brief__grid">
+          <section className="local-brief__group" aria-label="Evidence cards">
+            <h3>Evidence cards</h3>
+            {brief.evidenceCards.map((card) => (
+              <EvidenceCardView card={card} citationMap={citationMap} key={card.id} />
+            ))}
+          </section>
+          <section className="local-brief__group" aria-label="Brief blocks">
+            <h3>Brief blocks</h3>
+            {brief.blocks.map((block) => (
+              <BriefBlockView block={block} citationMap={citationMap} key={block.id} />
+            ))}
+          </section>
+        </div>
+      )}
     </section>
   );
 }
@@ -131,6 +141,23 @@ function CitationAuditStatus({ audit }: { audit: CitationAuditResult }) {
       <p>{formatAuditStatus(audit)}</p>
       {visibleIssues.length ? (
         <ul aria-label="Citation audit issues">
+          {visibleIssues.map((issue) => (
+            <li key={issue.id}>{issue.message}</li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+function GenerationPolicyStatus({ policy }: { policy: GenerationPolicyResult }) {
+  const visibleIssues = policy.issues.filter((issue) => issue.severity === "error" || issue.severity === "warning");
+
+  return (
+    <div className={`local-brief__policy local-brief__policy--${getPolicyTone(policy)}`}>
+      <p>{formatPolicyStatus(policy)}</p>
+      {visibleIssues.length ? (
+        <ul aria-label="Generation policy issues">
           {visibleIssues.map((issue) => (
             <li key={issue.id}>{issue.message}</li>
           ))}
@@ -187,12 +214,36 @@ function formatIssueCount(count: number, label: "error" | "warning") {
   return `${count} ${label}${count === 1 ? "" : "s"}`;
 }
 
+function formatPolicyStatus(policy: GenerationPolicyResult) {
+  if (!policy.allowedToDisplay) {
+    return "Generation policy: blocked · source-grounded display disabled";
+  }
+
+  if (policy.warningCount > 0) {
+    return "Generation policy: allowed with warnings · source-grounded display enabled";
+  }
+
+  return "Generation policy: allowed · source-grounded display enabled";
+}
+
 function getAuditTone(audit: CitationAuditResult) {
   if (!audit.passed) {
     return "error";
   }
 
   if (audit.warningCount > 0) {
+    return "warning";
+  }
+
+  return "success";
+}
+
+function getPolicyTone(policy: GenerationPolicyResult) {
+  if (!policy.allowedToDisplay) {
+    return "error";
+  }
+
+  if (policy.warningCount > 0) {
     return "warning";
   }
 
