@@ -51,4 +51,30 @@ describe("WorkspaceShell", () => {
     fireEvent.click(within(exportDialog).getByRole("button", { name: /링크 복사|Copy link/i }));
     expect(screen.getAllByText(/목업 공유 링크를 복사했습니다|Mock share link copied/i).length).toBeGreaterThan(0);
   });
+
+  it("loads the deterministic mock YouTube ingestion result from the Source tab", async () => {
+    render(<WorkspaceShell demo={luminaDemo} />);
+
+    const sourcePanel = screen.getByRole("tabpanel", { name: /Source/i });
+    const sourceInput = within(sourcePanel).getByLabelText("Try source URL");
+
+    fireEvent.change(sourceInput, { target: { value: "https://youtu.be/511ctokiROU?t=123s" } });
+    fireEvent.click(within(sourcePanel).getByRole("button", { name: "Ingest source URL" }));
+
+    expect(await within(sourcePanel).findByText("Mock YouTube ingestion loaded 7 segments.")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText("mock-youtube-transcript")).toBeInTheDocument();
+  });
+
+  it("shows calm Source-tab feedback for unsupported ingestion URLs", async () => {
+    render(<WorkspaceShell demo={luminaDemo} />);
+
+    const sourcePanel = screen.getByRole("tabpanel", { name: /Source/i });
+
+    fireEvent.change(within(sourcePanel).getByLabelText("Try source URL"), {
+      target: { value: "https://example.com/watch?v=511ctokiROU" },
+    });
+    fireEvent.click(within(sourcePanel).getByRole("button", { name: "Ingest source URL" }));
+
+    expect(await within(sourcePanel).findByText("Only YouTube URLs are supported.")).toBeInTheDocument();
+  });
 });

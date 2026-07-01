@@ -29,6 +29,7 @@ interface ContextPanelProps {
   responseMode: string;
   onTabChange: (tab: ContextTabId) => void;
   onActiveSegmentChange: (id: string) => void;
+  onIngestSourceUrl?: (url: string) => Promise<string>;
   onTranslationToggle: () => void;
   onAssistantScopeChange: (scope: "source" | "collection" | "web_source") => void;
   onAssistantDraftChange: (draft: string) => void;
@@ -54,6 +55,7 @@ export function ContextPanel({
   responseMode,
   onTabChange,
   onActiveSegmentChange,
+  onIngestSourceUrl,
   onTranslationToggle,
   onAssistantScopeChange,
   onAssistantDraftChange,
@@ -115,6 +117,7 @@ export function ContextPanel({
           showTranslation={showTranslation}
           source={source}
           onActiveSegmentChange={onActiveSegmentChange}
+          onIngestSourceUrl={onIngestSourceUrl}
           onMockAction={onMockAction}
           onTranslationToggle={onTranslationToggle}
         />
