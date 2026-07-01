@@ -16,12 +16,17 @@ import type {
   TranscriptFetchResult,
   YouTubeSourceInput,
 } from "@/lib/types/workspace";
+import { getSourceProviderById } from "@/lib/future/ingestion-provider-registry";
+import type { SourceProviderDescriptor } from "@/lib/future/ingestion-provider-registry";
 
 const sampleVideoId = "511ctokiROU";
 const sampleCanonicalUrl = `https://www.youtube.com/watch?v=${sampleVideoId}`;
 const deterministicFetchedAt = "2026-07-01T00:00:00.000Z";
 const supportedVideoIdPattern = /^[A-Za-z0-9_-]+$/;
 const manualTranscriptProviderId = "manual-transcript";
+const mockSourceProviderDescriptor = getRequiredSourceProviderDescriptor("mock-youtube-transcript");
+const manualSourceProviderDescriptor = getRequiredSourceProviderDescriptor("manual-transcript");
+const futureYouTubeSourceProviderDescriptor = getRequiredSourceProviderDescriptor("future-youtube-captions");
 
 export interface YouTubeTranscriptProvider {
   id?: string;
@@ -58,37 +63,37 @@ export interface TranscriptProviderSelection {
 }
 
 const mockProviderDescriptor: TranscriptProviderDescriptor = {
-  id: "mock-youtube-transcript",
-  name: "Mock YouTube Transcript",
+  id: mockSourceProviderDescriptor.id,
+  name: mockSourceProviderDescriptor.name,
   capabilities: ["mock"],
-  requiresNetwork: false,
-  requiresApiKey: false,
+  requiresNetwork: mockSourceProviderDescriptor.requiresNetwork,
+  requiresApiKey: mockSourceProviderDescriptor.requiresApiKey,
   supportsLanguageDetection: false,
-  supportsTranslation: true,
-  reliability: "demo",
+  supportsTranslation: mockSourceProviderDescriptor.capabilities.includes("translation"),
+  reliability: mockSourceProviderDescriptor.reliability,
 };
 
 const providerDescriptors: TranscriptProviderDescriptor[] = [
   mockProviderDescriptor,
   {
-    id: "future-youtube-captions",
-    name: "Future YouTube Captions",
+    id: futureYouTubeSourceProviderDescriptor.id,
+    name: futureYouTubeSourceProviderDescriptor.name,
     capabilities: ["official-captions"],
-    requiresNetwork: true,
-    requiresApiKey: true,
+    requiresNetwork: futureYouTubeSourceProviderDescriptor.requiresNetwork,
+    requiresApiKey: futureYouTubeSourceProviderDescriptor.requiresApiKey,
     supportsLanguageDetection: true,
     supportsTranslation: false,
-    reliability: "experimental",
+    reliability: futureYouTubeSourceProviderDescriptor.reliability,
   },
   {
-    id: "manual-transcript",
-    name: "Manual Transcript",
+    id: manualSourceProviderDescriptor.id,
+    name: manualSourceProviderDescriptor.name,
     capabilities: ["manual-transcript"],
-    requiresNetwork: false,
-    requiresApiKey: false,
+    requiresNetwork: manualSourceProviderDescriptor.requiresNetwork,
+    requiresApiKey: manualSourceProviderDescriptor.requiresApiKey,
     supportsLanguageDetection: false,
     supportsTranslation: false,
-    reliability: "experimental",
+    reliability: manualSourceProviderDescriptor.reliability,
   },
   {
     id: "audio-transcription-fallback",
@@ -101,6 +106,16 @@ const providerDescriptors: TranscriptProviderDescriptor[] = [
     reliability: "experimental",
   },
 ];
+
+function getRequiredSourceProviderDescriptor(providerId: string): SourceProviderDescriptor {
+  const descriptor = getSourceProviderById(providerId);
+
+  if (!descriptor) {
+    throw new Error(`Source provider descriptor is not configured for ${providerId}.`);
+  }
+
+  return descriptor;
+}
 
 export class YouTubeIngestionException extends Error implements IngestionError {
   code: IngestionError["code"];

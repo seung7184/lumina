@@ -5,9 +5,9 @@ import type {
   SegmentCitationRef,
   SourceMetadata,
 } from "@/lib/types/workspace";
+import { getSourceProviderById } from "@/lib/future/ingestion-provider-registry";
 
-const mockPdfProviderId = "mock-pdf";
-const mockPdfProviderName = "Mock PDF";
+const mockPdfProviderDescriptor = getRequiredMockPdfProviderDescriptor();
 
 export interface PdfIngestionProvider {
   id?: string;
@@ -24,9 +24,9 @@ export function ingestMockPdfSource(input: PdfSourceInput): IngestionResult {
     title,
     language: input.language ?? "en",
     canonicalUrl,
-    providerId: mockPdfProviderId,
-    providerName: mockPdfProviderName,
-    providerReliability: "demo",
+    providerId: mockPdfProviderDescriptor.id,
+    providerName: mockPdfProviderDescriptor.name,
+    providerReliability: mockPdfProviderDescriptor.reliability,
   };
   const segments = buildMockPdfSegments(sourceMetadata);
 
@@ -45,8 +45,8 @@ export function ingestMockPdfSource(input: PdfSourceInput): IngestionResult {
 }
 
 export class MockPdfIngestionProvider implements PdfIngestionProvider {
-  id = mockPdfProviderId;
-  name = mockPdfProviderName;
+  id = mockPdfProviderDescriptor.id;
+  name = mockPdfProviderDescriptor.name;
 
   ingest(input: PdfSourceInput): IngestionResult {
     return ingestMockPdfSource(input);
@@ -101,4 +101,14 @@ function buildStableSourceSlug(value: string) {
     .slice(0, 64);
 
   return slug || "mock-source-pdf";
+}
+
+function getRequiredMockPdfProviderDescriptor() {
+  const descriptor = getSourceProviderById("mock-pdf");
+
+  if (!descriptor) {
+    throw new Error("Mock PDF provider metadata is not configured.");
+  }
+
+  return descriptor;
 }

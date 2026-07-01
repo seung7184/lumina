@@ -36,6 +36,7 @@ describe("mock webpage ingestion", () => {
       title: "Lumina Boundary Notes",
       language: "ko",
       canonicalUrl: "https://example.com/articles/lumina-boundary",
+      providerId: "mock-webpage",
       providerName: "Mock Webpage",
       providerReliability: "demo",
     });

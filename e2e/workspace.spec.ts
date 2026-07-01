@@ -51,6 +51,16 @@ test("desktop workspace loads and core interactions work", async ({ page }) => {
   await page.getByRole("tab", { name: "Highlight" }).click();
   await expect(page.getByText("Key claims")).toBeVisible();
 
+  await page.getByRole("tab", { name: "Source" }).click();
+  const sourcePanel = page.getByRole("tabpanel", { name: "Source" });
+  await sourcePanel.getByRole("button", { name: "View provider catalog" }).click();
+  const providerCatalog = sourcePanel.getByRole("region", { name: "Source provider catalog" });
+  await expect(providerCatalog).toBeVisible();
+  await expect(providerCatalog.getByText("YouTube mock", { exact: true })).toBeVisible();
+  await expect(providerCatalog.getByText("PDF OCR", { exact: true })).toBeVisible();
+  await expect(providerCatalog.getByText("Placeholder").first()).toBeVisible();
+  await expect(sourcePanel.getByRole("button", { name: "PDF OCR" })).toHaveCount(0);
+
   const exportButton = page.getByRole("button", { name: "Export", exact: true });
   await expect(exportButton).toHaveAttribute("aria-haspopup", "dialog");
   await exportButton.click();

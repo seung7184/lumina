@@ -8,6 +8,11 @@ import type {
   SourceSegment,
   WebpageSourceInput,
 } from "@/lib/types/workspace";
+import {
+  getSourceProviderRequirementsSummary,
+  listSourceProviders,
+} from "@/lib/future/ingestion-provider-registry";
+import type { SourceProviderDescriptor, SourceProviderKind } from "@/lib/future/ingestion-provider-registry";
 import { TranscriptList } from "@/components/context-panel/TranscriptList";
 import { idleSourceIngestionStatus, type SourceIngestionStatus } from "@/components/context-panel/source-ingestion-status";
 
@@ -43,6 +48,7 @@ export function SourceTab({
   onTranslationToggle,
 }: SourceTabProps) {
   const [manualTranscriptOpen, setManualTranscriptOpen] = useState(false);
+  const [providerCatalogOpen, setProviderCatalogOpen] = useState(false);
   const [ingestStatus, setIngestStatus] = useState<SourceIngestionStatus>({
     ...idleSourceIngestionStatus,
     providerName: source.providerName ?? "Mock YouTube Transcript",
@@ -259,6 +265,9 @@ export function SourceTab({
   const providerLine = ingestStatus.providerName
     ? `Provider: ${ingestStatus.providerName} · ${ingestStatus.providerReliability ?? "demo"} reliability`
     : undefined;
+  const sourceProviders = listSourceProviders();
+  const activeProviders = sourceProviders.filter((provider) => provider.availability === "active");
+  const futureProviders = sourceProviders.filter((provider) => provider.availability === "placeholder");
   const durationLabel = source.durationSeconds ? formatDuration(source.durationSeconds) : source.type.toUpperCase();
   const sourceLanguageLabel = source.sourceLanguage === "ko" ? "한국어 · Korean" : "English";
 
@@ -410,6 +419,32 @@ export function SourceTab({
           <button type="submit">Use mock PDF</button>
         </form>
       </section>
+      <section className="source-provider-panel">
+        <div>
+          <strong>Source providers</strong>
+          <p>Active: {activeProviders.map((provider) => provider.shortLabel).join(", ")}</p>
+          <p>Future: {futureProviders.map((provider) => provider.shortLabel).join(", ")}</p>
+        </div>
+        <button
+          type="button"
+          className="source-provider-toggle"
+          aria-expanded={providerCatalogOpen}
+          aria-controls={`${panelId}-provider-catalog`}
+          onClick={() => setProviderCatalogOpen((open) => !open)}
+        >
+          View provider catalog
+        </button>
+        {providerCatalogOpen ? (
+          <section
+            className="source-provider-catalog"
+            id={`${panelId}-provider-catalog`}
+            aria-label="Source provider catalog"
+          >
+            <ProviderCatalogGroup title="Active providers" providers={activeProviders} />
+            <ProviderCatalogGroup title="Future placeholders" providers={futureProviders} />
+          </section>
+        ) : null}
+      </section>
       <div className="transcript-head">
         <strong>Transcript</strong>
         <span>{segments.length} segments</span>
@@ -438,6 +473,44 @@ export function SourceTab({
       />
     </div>
   );
+}
+
+function ProviderCatalogGroup({
+  title,
+  providers,
+}: {
+  title: string;
+  providers: SourceProviderDescriptor[];
+}) {
+  return (
+    <div className="source-provider-group">
+      <strong>{title}</strong>
+      <ul>
+        {providers.map((provider) => (
+          <li key={provider.id}>
+            <div className="source-provider-row__head">
+              <span>{provider.shortLabel}</span>
+              <small>{formatSourceProviderKind(provider.sourceKind)}</small>
+              <small>{provider.reliability}</small>
+            </div>
+            <div className="source-provider-badges" aria-label={`${provider.shortLabel} requirements`}>
+              {getSourceProviderRequirementsSummary(provider).map((label) => (
+                <span key={label}>{label}</span>
+              ))}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function formatSourceProviderKind(sourceKind: SourceProviderKind) {
+  if (sourceKind === "manual-transcript") {
+    return "manual";
+  }
+
+  return sourceKind;
 }
 
 function formatDuration(seconds: number) {

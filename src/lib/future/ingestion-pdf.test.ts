@@ -14,6 +14,7 @@ describe("mock PDF ingestion", () => {
       kind: "pdf",
       title: "lumina-boundary.pdf",
       canonicalUrl: "lumina-boundary.pdf",
+      providerId: "mock-pdf",
       providerName: "Mock PDF",
       providerReliability: "demo",
     });
