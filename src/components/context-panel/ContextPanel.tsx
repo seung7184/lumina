@@ -2,6 +2,7 @@ import type {
   AssistantMessage,
   AssistantPrompt,
   HighlightItem,
+  ManualTranscriptInput,
   SourceDocument,
   SourceSegment,
 } from "@/lib/types/workspace";
@@ -31,6 +32,7 @@ interface ContextPanelProps {
   onTabChange: (tab: ContextTabId) => void;
   onActiveSegmentChange: (id: string) => void;
   onIngestSourceUrl?: (url: string) => Promise<SourceIngestionStatus>;
+  onUseManualTranscript?: (input: ManualTranscriptInput) => Promise<SourceIngestionStatus>;
   onTranslationToggle: () => void;
   onAssistantScopeChange: (scope: "source" | "collection" | "web_source") => void;
   onAssistantDraftChange: (draft: string) => void;
@@ -57,6 +59,7 @@ export function ContextPanel({
   onTabChange,
   onActiveSegmentChange,
   onIngestSourceUrl,
+  onUseManualTranscript,
   onTranslationToggle,
   onAssistantScopeChange,
   onAssistantDraftChange,
@@ -119,6 +122,7 @@ export function ContextPanel({
           source={source}
           onActiveSegmentChange={onActiveSegmentChange}
           onIngestSourceUrl={onIngestSourceUrl}
+          onUseManualTranscript={onUseManualTranscript}
           onMockAction={onMockAction}
           onTranslationToggle={onTranslationToggle}
         />

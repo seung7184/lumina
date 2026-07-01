@@ -63,6 +63,29 @@ test("desktop workspace loads and core interactions work", async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test("desktop Source tab accepts a local manual transcript paste", async ({ page }) => {
+  const errors = collectPageErrors(page);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/");
+
+  const sourcePanel = page.getByRole("tabpanel", { name: "Source" });
+  await sourcePanel.getByRole("button", { name: "Paste manual transcript" }).click();
+  await sourcePanel.getByRole("button", { name: "Use manual transcript" }).click();
+  await expect(sourcePanel.getByText("Paste transcript text first.")).toBeVisible();
+
+  await sourcePanel.getByLabel("Manual title").fill("Manual fallback source");
+  await sourcePanel.getByLabel("Manual language").fill("ko");
+  await sourcePanel.getByLabel("Manual transcript text").fill("[00:12] First pasted line\n00:24 - 00:30 Second pasted line");
+  await sourcePanel.getByRole("button", { name: "Use manual transcript" }).click();
+
+  await expect(sourcePanel.getByText("Ready. Manual Transcript loaded 2 segments with 2 citations.")).toBeVisible();
+  await expect(sourcePanel.getByText("Provider: Manual Transcript · experimental reliability")).toBeVisible();
+  await expect(sourcePanel.getByText("First pasted line")).toBeVisible();
+  await expect(page.getByText("AI literacy creates widening outcomes")).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  expect(errors).toEqual([]);
+});
+
 test("tablet context drawer opens Source, Assistant, and Highlight without scrolling to document bottom", async ({ page }) => {
   const errors = collectPageErrors(page);
   await page.setViewportSize({ width: 1024, height: 900 });

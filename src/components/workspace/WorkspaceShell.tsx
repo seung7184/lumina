@@ -6,9 +6,13 @@ import type {
   AssistantMessage,
   CitationRef,
   ExportOptions,
+  IngestionWarning,
   LanguageCode,
   LuminaDemoWorkspace,
+  ManualTranscriptInput,
   ReportMode,
+  SourceDocument,
+  SourceSegment,
 } from "@/lib/types/workspace";
 import type { SourceIngestionStatus } from "@/components/context-panel/source-ingestion-status";
 import { ContextPanel } from "@/components/context-panel/ContextPanel";
@@ -17,8 +21,10 @@ import { ResearchDocument } from "@/components/workspace/ResearchDocument";
 import { WorkspaceSidebar } from "@/components/workspace/WorkspaceSidebar";
 import {
   buildSourceDocumentFromYouTube,
+  buildSourceDocumentFromMetadata,
   buildWorkspaceCitationRefsFromSegments,
   buildWorkspaceSegmentsFromNormalized,
+  ingestManualTranscriptSource,
   ingestYouTubeSource,
   isIngestionError,
 } from "@/lib/future/ingestion-youtube";
@@ -183,25 +189,7 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
       const segments = buildWorkspaceSegmentsFromNormalized(result.segments);
       const citations = buildWorkspaceCitationRefsFromSegments(result.segments);
 
-      setWorkspace((current) => ({
-        ...current,
-        source,
-        segments,
-        summaries: {
-          en: {
-            ...current.summaries.en,
-            sourceId: source.id,
-            citations: mergeCitationRefs(current.summaries.en.citations, citations),
-          },
-          ko: {
-            ...current.summaries.ko,
-            sourceId: source.id,
-            citations: mergeCitationRefs(current.summaries.ko.citations, citations),
-          },
-        },
-      }));
-      setActiveSegmentId(segments[0]?.id ?? "");
-      setContextTab("source");
+      applyIngestionResult(source, segments, citations);
 
       return {
         phase: "ready",
@@ -213,7 +201,7 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
         providerReliability: source.providerReliability ?? "demo",
         segmentCount: segments.length,
         citationCount: citations.length,
-        warnings: result.warnings.map((warning) => formatIngestionWarning(warning.code)),
+        warnings: result.warnings.map(formatIngestionWarning),
       };
     } catch (error) {
       return {
@@ -224,6 +212,60 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
         providerReliability: "demo",
       };
     }
+  }
+
+  async function handleUseManualTranscript(input: ManualTranscriptInput): Promise<SourceIngestionStatus> {
+    try {
+      const result = ingestManualTranscriptSource(input);
+      const source = buildSourceDocumentFromMetadata(result.sourceMetadata, result.segments);
+      const segments = buildWorkspaceSegmentsFromNormalized(result.segments);
+      const citations = buildWorkspaceCitationRefsFromSegments(result.segments);
+
+      applyIngestionResult(source, segments, citations);
+
+      return {
+        phase: "ready",
+        label: "Ready",
+        message: `Ready. ${source.providerName ?? "Manual Transcript"} loaded ${segments.length} segments with ${
+          citations.length
+        } citations.`,
+        providerName: source.providerName ?? "Manual Transcript",
+        providerReliability: source.providerReliability ?? "experimental",
+        segmentCount: segments.length,
+        citationCount: citations.length,
+        warnings: result.warnings.map(formatIngestionWarning),
+      };
+    } catch (error) {
+      return {
+        phase: "error",
+        label: "Error",
+        message: formatIngestionError(error),
+        providerName: "Manual Transcript",
+        providerReliability: "experimental",
+      };
+    }
+  }
+
+  function applyIngestionResult(source: SourceDocument, segments: SourceSegment[], citations: CitationRef[]) {
+    setWorkspace((current) => ({
+      ...current,
+      source,
+      segments,
+      summaries: {
+        en: {
+          ...current.summaries.en,
+          sourceId: source.id,
+          citations: mergeCitationRefs(current.summaries.en.citations, citations),
+        },
+        ko: {
+          ...current.summaries.ko,
+          sourceId: source.id,
+          citations: mergeCitationRefs(current.summaries.ko.citations, citations),
+        },
+      },
+    }));
+    setActiveSegmentId(segments[0]?.id ?? "");
+    setContextTab("source");
   }
 
   return (
@@ -284,6 +326,7 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
         source={workspace.source}
         onActiveSegmentChange={setActiveSegmentId}
         onIngestSourceUrl={handleIngestSourceUrl}
+        onUseManualTranscript={handleUseManualTranscript}
         onAssistantScopeChange={setAssistantScope}
         onAssistantDraftChange={setAssistantDraft}
         onAssistantSend={handleAssistantSend}
@@ -339,6 +382,7 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
               source={workspace.source}
               onActiveSegmentChange={setActiveSegmentId}
               onIngestSourceUrl={handleIngestSourceUrl}
+              onUseManualTranscript={handleUseManualTranscript}
               onAssistantScopeChange={setAssistantScope}
               onAssistantDraftChange={setAssistantDraft}
               onAssistantSend={handleAssistantSend}
@@ -364,16 +408,24 @@ function mergeCitationRefs(existing: CitationRef[], incoming: CitationRef[]) {
   return Array.from(citationMap.values());
 }
 
-function formatIngestionWarning(code: string) {
-  if (code === "EMPTY_TRANSCRIPT") {
-    return "The provider returned no transcript segments.";
+function formatIngestionWarning(warning: IngestionWarning) {
+  if (warning.code === "EMPTY_TRANSCRIPT") {
+    return warning.message.includes("Manual transcript")
+      ? "Manual transcript did not contain any usable segments."
+      : "The provider returned no transcript segments.";
   }
 
-  if (code === "TRANSLATION_UNAVAILABLE") {
-    return "Translation is not available for every segment yet.";
+  if (warning.code === "TRANSLATION_UNAVAILABLE") {
+    return warning.message.includes("manual transcript")
+      ? "Translation is not available for manual transcript segments yet."
+      : "Translation is not available for every segment yet.";
   }
 
-  if (code === "PARTIAL_TRANSCRIPT") {
+  if (warning.code === "MANUAL_TRANSCRIPT_UNTIMESTAMPED") {
+    return "Manual transcript has no timestamps, so citations link to the source URL only.";
+  }
+
+  if (warning.code === "PARTIAL_TRANSCRIPT") {
     return "Some transcript segments are missing end timestamps.";
   }
 
@@ -394,7 +446,7 @@ function formatIngestionError(error: unknown) {
   }
 
   if (error.code === "TRANSCRIPT_UNAVAILABLE") {
-    return "This source was recognized, but no transcript is available yet. You can paste a manual transcript in a future flow.";
+    return "This source was recognized, but no transcript is available yet. You can paste a manual transcript below.";
   }
 
   if (error.code === "EMPTY_TRANSCRIPT") {

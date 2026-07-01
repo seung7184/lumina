@@ -3,6 +3,7 @@ export type IngestionStatusPhase =
   | "validating-url"
   | "selecting-provider"
   | "fetching-transcript"
+  | "parsing-manual-transcript"
   | "normalizing-segments"
   | "ready"
   | "error";
