@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import type {
   AssistantMessage,
@@ -46,6 +47,7 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
   const [assistantDraft, setAssistantDraft] = useState("");
   const [localAssistantMessages, setLocalAssistantMessages] = useState<AssistantMessage[]>([]);
   const [feedback, setFeedback] = useState("");
+  const [contextDrawerOpen, setContextDrawerOpen] = useState(false);
 
   const summary = demo.summaries[language];
   const assistantMessages = [...demo.assistantMessages, ...localAssistantMessages];
@@ -57,6 +59,21 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
     const timeout = window.setTimeout(() => setFeedback(""), 2600);
     return () => window.clearTimeout(timeout);
   }, [feedback]);
+
+  useEffect(() => {
+    if (!contextDrawerOpen) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setContextDrawerOpen(false);
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [contextDrawerOpen]);
 
   function announce(message: string) {
     setFeedback(message);
@@ -70,6 +87,11 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
     setAssistantDraft(prompt.description);
     setContextTab("assistant");
     announce(`${prompt.label} added to the assistant composer.`);
+  }
+
+  function openContextDrawer(tab: "source" | "assistant" | "highlight") {
+    setContextTab(tab);
+    setContextDrawerOpen(true);
   }
 
   function handleAssistantSend() {
@@ -167,6 +189,61 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
         onTabChange={setContextTab}
         onTranslationToggle={() => setShowTranslation((show) => !show)}
       />
+      <div className="responsive-context-access" aria-label="Context shortcuts">
+        {(["source", "assistant", "highlight"] as const).map((tab) => (
+          <button
+            aria-label={`Open ${tab[0].toUpperCase() + tab.slice(1)} context`}
+            aria-pressed={contextDrawerOpen && contextTab === tab}
+            className={contextTab === tab ? "is-active" : ""}
+            key={tab}
+            type="button"
+            onClick={() => openContextDrawer(tab)}
+          >
+            {tab[0].toUpperCase() + tab.slice(1)}
+          </button>
+        ))}
+      </div>
+      {contextDrawerOpen ? (
+        <div className="context-drawer-layer">
+          <button
+            className="context-drawer-backdrop"
+            type="button"
+            aria-label="Dismiss context overlay"
+            onClick={() => setContextDrawerOpen(false)}
+          />
+          <section className="context-drawer" role="dialog" aria-modal="true" aria-label="Context drawer">
+            <header className="context-drawer__header">
+              <strong>{contextTab[0].toUpperCase() + contextTab.slice(1)}</strong>
+              <button type="button" aria-label="Close context drawer" onClick={() => setContextDrawerOpen(false)}>
+                <X size={16} aria-hidden="true" />
+              </button>
+            </header>
+            <ContextPanel
+              activeSegmentId={activeSegmentId}
+              activeTab={contextTab}
+              assistantComposerId="assistant-draft-drawer"
+              assistantDraft={assistantDraft}
+              assistantMessages={assistantMessages}
+              assistantPrompts={demo.assistantPrompts}
+              assistantScope={assistantScope}
+              highlights={demo.highlights}
+              responseMode={responseMode}
+              segments={demo.segments}
+              showTranslation={showTranslation}
+              source={demo.source}
+              onActiveSegmentChange={setActiveSegmentId}
+              onAssistantScopeChange={setAssistantScope}
+              onAssistantDraftChange={setAssistantDraft}
+              onAssistantSend={handleAssistantSend}
+              onMockAction={announce}
+              onPromptSelect={handlePromptSelect}
+              onResponseModeChange={setResponseMode}
+              onTabChange={setContextTab}
+              onTranslationToggle={() => setShowTranslation((show) => !show)}
+            />
+          </section>
+        </div>
+      ) : null}
       <div className="mock-feedback" role="status" aria-live="polite">
         {feedback}
       </div>

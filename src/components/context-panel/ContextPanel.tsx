@@ -18,6 +18,7 @@ interface ContextPanelProps {
   assistantMessages: AssistantMessage[];
   assistantPrompts: AssistantPrompt[];
   assistantDraft: string;
+  assistantComposerId?: string;
   highlights: HighlightItem[];
   assistantScope: "source" | "collection" | "web_source";
   responseMode: string;
@@ -41,6 +42,7 @@ export function ContextPanel({
   assistantMessages,
   assistantPrompts,
   assistantDraft,
+  assistantComposerId = "assistant-draft",
   highlights,
   assistantScope,
   responseMode,
@@ -84,6 +86,7 @@ export function ContextPanel({
         <AssistantTab
           messages={assistantMessages}
           draft={assistantDraft}
+          composerId={assistantComposerId}
           prompts={assistantPrompts}
           responseMode={responseMode}
           scope={assistantScope}

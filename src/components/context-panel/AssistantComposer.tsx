@@ -1,6 +1,7 @@
 import { AtSign, Paperclip, Send } from "lucide-react";
 
 interface AssistantComposerProps {
+  id: string;
   draft: string;
   responseMode: string;
   onDraftChange: (draft: string) => void;
@@ -12,6 +13,7 @@ interface AssistantComposerProps {
 const responseModes = ["Standard", "Critical", "Action-oriented", "Study", "Founder", "Developer", "Investor"];
 
 export function AssistantComposer({
+  id,
   draft,
   responseMode,
   onDraftChange,
@@ -35,11 +37,11 @@ export function AssistantComposer({
         ))}
       </div>
       <div className="composer-box">
-        <label className="sr-only" htmlFor="assistant-draft">
+        <label className="sr-only" htmlFor={id}>
           Ask anything about this source
         </label>
         <textarea
-          id="assistant-draft"
+          id={id}
           value={draft}
           onChange={(event) => onDraftChange(event.target.value)}
           placeholder="Ask anything about this source..."

@@ -24,7 +24,7 @@ describe("WorkspaceShell", () => {
       }),
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Assistant/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Assistant" }));
     expect(screen.getByText("Validate this idea")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Explain more simply/i }));
     expect(screen.getByLabelText(/Ask anything about this source/i)).toHaveValue(
@@ -33,16 +33,16 @@ describe("WorkspaceShell", () => {
     fireEvent.click(screen.getByRole("button", { name: /Send assistant question/i }));
     expect(screen.getByText(/Mock response queued from this source/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Highlight/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Highlight" }));
     expect(screen.getByText("Needs validation")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Source/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Source" }));
     const sourcePanel = screen.getByRole("tabpanel", { name: /Source/i });
     expect(within(sourcePanel).getByText(/7 segments/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("switch", { name: /Translate transcript/i }));
     expect(screen.queryByText(/AI knowledge is severely lacking right now/i)).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Export/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Export" }));
     const menu = screen.getByRole("menu", { name: /Export options/i });
     expect(within(menu).getByText("Markdown")).toBeInTheDocument();
     fireEvent.click(within(menu).getByRole("radio", { name: /Slides/i }));

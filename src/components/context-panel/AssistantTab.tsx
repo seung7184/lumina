@@ -7,6 +7,7 @@ interface AssistantTabProps {
   messages: AssistantMessage[];
   prompts: AssistantPrompt[];
   draft: string;
+  composerId: string;
   scope: "source" | "collection" | "web_source";
   responseMode: string;
   onDraftChange: (draft: string) => void;
@@ -21,6 +22,7 @@ export function AssistantTab({
   messages,
   prompts,
   draft,
+  composerId,
   scope,
   responseMode,
   onDraftChange,
@@ -62,6 +64,7 @@ export function AssistantTab({
       </div>
       <AssistantComposer
         draft={draft}
+        id={composerId}
         responseMode={responseMode}
         onDraftChange={onDraftChange}
         onMockAction={onMockAction}
