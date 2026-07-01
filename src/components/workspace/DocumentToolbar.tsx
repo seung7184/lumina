@@ -136,7 +136,7 @@ export function DocumentToolbar({
           ref={exportButtonRef}
           onClick={onExportToggle}
           aria-expanded={exportOpen}
-          aria-haspopup="menu"
+          aria-haspopup="dialog"
         >
           <Download size={15} aria-hidden="true" />
           Export

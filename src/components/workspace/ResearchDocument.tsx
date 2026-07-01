@@ -36,7 +36,7 @@ export function ResearchDocument({
   const citationMap = new Map(summary.citations.map((citation) => [citation.id, citation]));
 
   return (
-    <main className="document-pane" aria-label="Research document">
+    <section className="document-pane" aria-label="Research document">
       <article className="research-document">
         <DocumentHeader
           source={source}
@@ -50,7 +50,7 @@ export function ResearchDocument({
           renderBlock(block, citationMap, visualsEnabled, reportModes, activeModeId, language, onReportModeChange, onMockAction),
         )}
       </article>
-    </main>
+    </section>
   );
 }
 

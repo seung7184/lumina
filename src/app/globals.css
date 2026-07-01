@@ -8,18 +8,18 @@
   --p-cream: #f1e7ce;
   --p-ink: #15140f;
   --p-ink-soft: #34302a;
-  --p-text-muted: #6a645b;
-  --p-text-faint: #9b9384;
+  --p-text-muted: #5f594f;
+  --p-text-faint: #625c53;
   --p-teal: #117f6f;
   --p-teal-deep: #0e6b5d;
   --p-teal-tint: rgba(17, 127, 111, 0.1);
   --p-teal-line: rgba(17, 127, 111, 0.3);
-  --p-sage: #5c8a6a;
-  --p-sage-deep: #45714f;
-  --p-sage-tint: rgba(92, 138, 106, 0.1);
+  --p-sage: #497454;
+  --p-sage-deep: #3f6948;
+  --p-sage-tint: rgba(73, 116, 84, 0.1);
   --p-forest: #2f5d50;
   --p-amber: #b5853a;
-  --p-amber-deep: #8a6321;
+  --p-amber-deep: #805817;
   --p-amber-tint: rgba(181, 133, 58, 0.1);
   --p-amber-line: rgba(181, 133, 58, 0.3);
   --p-coral: #b7553f;
@@ -1500,6 +1500,11 @@ dd {
 .prompt-card small {
   color: currentColor;
   opacity: 0.72;
+}
+
+.prompt-card:first-child small {
+  color: var(--p-surface);
+  opacity: 1;
 }
 
 .assistant-composer {
