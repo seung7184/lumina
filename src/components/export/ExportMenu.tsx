@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import type { RefObject } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, Link2 } from "lucide-react";
 import type { ExportOptions, LanguageCode } from "@/lib/types/workspace";
 
@@ -10,6 +11,7 @@ interface ExportMenuProps {
   onChange: (options: ExportOptions) => void;
   onClose: () => void;
   onMockAction: (message: string) => void;
+  returnFocusRef?: RefObject<HTMLElement | null>;
 }
 
 const formats = [
@@ -60,23 +62,34 @@ const exportCopy = {
   },
 } as const;
 
-export function ExportMenu({ language, options, onChange, onClose, onMockAction }: ExportMenuProps) {
+export function ExportMenu({ language, options, onChange, onClose, onMockAction, returnFocusRef }: ExportMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [localStatus, setLocalStatus] = useState("");
   const copy = exportCopy[language];
 
+  const closeMenu = useCallback(() => {
+    onClose();
+    window.requestAnimationFrame(() => returnFocusRef?.current?.focus());
+  }, [onClose, returnFocusRef]);
+
+  useEffect(() => {
+    window.setTimeout(() => closeButtonRef.current?.focus(), 0);
+  }, []);
+
   useEffect(() => {
     function handlePointerDown(event: PointerEvent) {
-      if (menuRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (menuRef.current?.contains(target) || returnFocusRef?.current?.contains(target)) {
         return;
       }
-      onClose();
+      closeMenu();
     }
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        closeMenu();
       }
     }
 
@@ -86,7 +99,7 @@ export function ExportMenu({ language, options, onChange, onClose, onMockAction 
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [onClose]);
+  }, [closeMenu, returnFocusRef]);
 
   function announce(message: string) {
     setLocalStatus(message);
@@ -97,7 +110,7 @@ export function ExportMenu({ language, options, onChange, onClose, onMockAction 
     <div className="export-menu" role="menu" aria-label="Export options" ref={menuRef}>
       <div className="export-menu__head">
         <strong>{copy.title}</strong>
-        <button type="button" onClick={onClose} aria-label="Close export menu">
+        <button type="button" onClick={closeMenu} aria-label="Close export menu" ref={closeButtonRef}>
           {copy.close}
         </button>
       </div>

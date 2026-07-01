@@ -24,7 +24,7 @@ describe("WorkspaceShell", () => {
       }),
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Assistant" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Assistant" }));
     expect(screen.getByText("Validate this idea")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Explain more simply/i }));
     expect(screen.getByLabelText(/Ask anything about this source/i)).toHaveValue(
@@ -33,10 +33,10 @@ describe("WorkspaceShell", () => {
     fireEvent.click(screen.getByRole("button", { name: /Send assistant question/i }));
     expect(screen.getByText(/Mock response queued from this source/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Highlight" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Highlight" }));
     expect(screen.getByText("Needs validation")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Source" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Source" }));
     const sourcePanel = screen.getByRole("tabpanel", { name: /Source/i });
     expect(within(sourcePanel).getByText(/7 segments/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("switch", { name: /Translate transcript/i }));

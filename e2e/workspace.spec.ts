@@ -18,6 +18,17 @@ async function expectNoHorizontalOverflow(page: Page) {
   expect(hasOverflow).toBe(false);
 }
 
+async function tabUntilFocused(page: Page, accessibleName: string | RegExp, maxTabs = 60) {
+  const target = page.getByRole("button", { name: accessibleName });
+  for (let index = 0; index < maxTabs; index += 1) {
+    if (await target.evaluate((element) => element === document.activeElement).catch(() => false)) {
+      return;
+    }
+    await page.keyboard.press("Tab");
+  }
+  await expect(target).toBeFocused();
+}
+
 test("desktop workspace loads and core interactions work", async ({ page }) => {
   const errors = collectPageErrors(page);
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -26,19 +37,26 @@ test("desktop workspace loads and core interactions work", async ({ page }) => {
   await expect(page.getByRole("heading", { name: /People Losing Everything/i })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
-  await page.getByRole("button", { name: "KR" }).click();
+  await tabUntilFocused(page, "KR");
+  await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { name: /AI로 전재산을 날리는 사람들과 시간이 무한해진 사람들/ })).toBeVisible();
 
-  await page.getByRole("button", { name: "Assistant" }).click();
+  await page.getByRole("tab", { name: "Assistant" }).click();
   await page.getByLabel("Ask anything about this source").fill("What claim needs validation first?");
   await page.getByRole("button", { name: "Send assistant question" }).click();
   await expect(page.getByText(/Mock response queued from this source/)).toBeVisible();
 
-  await page.getByRole("button", { name: "Highlight" }).click();
+  await page.getByRole("tab", { name: "Highlight" }).click();
   await expect(page.getByText("Key claims")).toBeVisible();
 
-  await page.getByRole("button", { name: "Export", exact: true }).click();
+  const exportButton = page.getByRole("button", { name: "Export", exact: true });
+  await expect(exportButton).toHaveAttribute("aria-haspopup", "menu");
+  await exportButton.click();
   await expect(page.getByRole("menu", { name: "Export options" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Close export menu" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu", { name: "Export options" })).toBeHidden();
+  await expect(exportButton).toBeFocused();
   await expectNoHorizontalOverflow(page);
   expect(errors).toEqual([]);
 });
@@ -52,16 +70,24 @@ test("tablet context drawer opens Source, Assistant, and Highlight without scrol
   await page.getByRole("button", { name: "Open Source context" }).click();
   const drawer = page.getByRole("dialog", { name: "Context drawer" });
   await expect(drawer).toBeVisible();
+  await expect(drawer.getByRole("button", { name: "Close context drawer" })).toBeFocused();
   await expect(drawer.getByRole("tabpanel", { name: "Source" })).toBeVisible();
 
-  await drawer.getByRole("button", { name: "Assistant", exact: true }).click();
+  await page.keyboard.press("Tab");
+  await expect(drawer.getByRole("tab", { name: "Source" })).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await expect(drawer.getByRole("tab", { name: "Assistant" })).toBeFocused();
+  await expect(drawer.getByRole("tabpanel", { name: "Assistant" })).toBeVisible();
+
+  await drawer.getByRole("tab", { name: "Assistant" }).click();
   await expect(drawer.getByLabel("Ask anything about this source")).toBeVisible();
 
-  await drawer.getByRole("button", { name: "Highlight", exact: true }).click();
+  await drawer.getByRole("tab", { name: "Highlight" }).click();
   await expect(drawer.getByText("Key claims")).toBeVisible();
 
-  await page.getByRole("button", { name: "Close context drawer" }).click();
+  await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Context drawer" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Open Source context" })).toBeFocused();
   await expectNoHorizontalOverflow(page);
   expect(errors).toEqual([]);
 });
@@ -75,6 +101,7 @@ test("mobile context sheet opens and closes from the sticky context bar", async 
   await page.getByRole("button", { name: "Open Assistant context" }).click();
   const sheet = page.getByRole("dialog", { name: "Context drawer" });
   await expect(sheet).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Close context drawer" })).toBeFocused();
   await sheet.getByLabel("Ask anything about this source").fill("Summarize the first claim.");
   await sheet.getByRole("button", { name: "Send assistant question" }).click();
   await expect(sheet.getByText(/Mock response queued from this source/)).toBeVisible();
@@ -88,4 +115,12 @@ test("mobile context sheet opens and closes from the sticky context bar", async 
   await expect(page.getByRole("dialog", { name: "Context drawer" })).toBeHidden();
   await expectNoHorizontalOverflow(page);
   expect(errors).toEqual([]);
+});
+
+test("major breakpoints do not introduce horizontal overflow", async ({ page }) => {
+  for (const width of [1280, 1024, 390]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+    await page.goto("/");
+    await expectNoHorizontalOverflow(page);
+  }
 });

@@ -406,7 +406,7 @@ dd {
 
 .segmented button {
   min-width: 36px;
-  height: 26px;
+  min-height: 28px;
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -444,8 +444,8 @@ dd {
 }
 
 .icon-button {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-color: var(--p-line);
 }
 
@@ -505,7 +505,7 @@ dd {
 }
 
 .export-menu__head button {
-  height: 28px;
+  min-height: 34px;
   padding: 0 8px;
   font-size: 12px;
 }
@@ -527,6 +527,7 @@ dd {
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: transparent;
+  min-height: 36px;
   padding: 7px 8px;
   text-align: left;
 }
@@ -1323,7 +1324,7 @@ dd {
 .switch {
   position: relative;
   width: 42px;
-  height: 24px;
+  min-height: 28px;
   border: 1px solid var(--p-line-strong);
   border-radius: 999px;
   background: var(--p-paper-deep);
@@ -1516,6 +1517,7 @@ dd {
 }
 
 .mode-pills button {
+  min-height: 32px;
   border: 1px solid var(--p-line);
   border-radius: 999px;
   background: var(--p-surface-raised);
@@ -1536,6 +1538,11 @@ dd {
   border-radius: var(--radius-lg);
   background: var(--p-surface-raised);
   padding: 11px 12px 8px;
+}
+
+.composer-box:focus-within {
+  border-color: var(--p-teal-line);
+  box-shadow: 0 0 0 3px var(--p-teal-tint);
 }
 
 .composer-box textarea {
@@ -1561,8 +1568,8 @@ dd {
 }
 
 .composer-box button {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
 }
 
 .composer-box button:last-child {

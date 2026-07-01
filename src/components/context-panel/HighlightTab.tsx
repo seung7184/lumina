@@ -3,6 +3,8 @@ import { HighlightItem } from "@/components/context-panel/HighlightItem";
 
 interface HighlightTabProps {
   highlights: HighlightItemType[];
+  labelledBy: string;
+  panelId: string;
   onMockAction: (message: string) => void;
 }
 
@@ -13,9 +15,9 @@ const sections = [
   ["user_note", "Your notes"],
 ] as const;
 
-export function HighlightTab({ highlights, onMockAction }: HighlightTabProps) {
+export function HighlightTab({ highlights, labelledBy, panelId, onMockAction }: HighlightTabProps) {
   return (
-    <div className="context-tab-body" role="tabpanel" aria-label="Highlight">
+    <div className="context-tab-body" role="tabpanel" id={panelId} aria-labelledby={labelledBy}>
       {sections.map(([category, label]) => {
         const items = highlights.filter((item) => item.category === category);
         return (

@@ -8,6 +8,8 @@ interface AssistantTabProps {
   prompts: AssistantPrompt[];
   draft: string;
   composerId: string;
+  labelledBy: string;
+  panelId: string;
   scope: "source" | "collection" | "web_source";
   responseMode: string;
   onDraftChange: (draft: string) => void;
@@ -23,6 +25,8 @@ export function AssistantTab({
   prompts,
   draft,
   composerId,
+  labelledBy,
+  panelId,
   scope,
   responseMode,
   onDraftChange,
@@ -33,12 +37,18 @@ export function AssistantTab({
   onSend,
 }: AssistantTabProps) {
   return (
-    <div className="assistant-tab" role="tabpanel" aria-label="Assistant">
+    <div className="assistant-tab" role="tabpanel" id={panelId} aria-labelledby={labelledBy}>
       <div className="context-tab-body">
         <span className="eyebrow">Scope</span>
         <div className="segmented segmented--wide" role="group" aria-label="Assistant scope">
           {(["source", "collection", "web_source"] as const).map((item) => (
-            <button className={scope === item ? "is-active" : ""} key={item} type="button" onClick={() => onScopeChange(item)}>
+            <button
+              aria-pressed={scope === item}
+              className={scope === item ? "is-active" : ""}
+              key={item}
+              type="button"
+              onClick={() => onScopeChange(item)}
+            >
               {item === "source" ? "This source" : item === "collection" ? "Collection" : "Web + source"}
             </button>
           ))}
