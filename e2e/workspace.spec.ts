@@ -133,9 +133,11 @@ test("desktop workspace generates and resets a local deterministic brief", async
   await expect(brief).toBeVisible();
   await expect(brief.getByRole("heading", { name: "Local source-grounded brief" })).toBeVisible();
   await expect(brief.getByText("Provider: Local Deterministic Brief · demo · No AI model used")).toBeVisible();
+  await expect(brief.getByText("Citation audit: passed · 0 errors · 0 warnings")).toBeVisible();
   await expect(brief.getByText("Evidence cards")).toBeVisible();
   await expect(brief.getByText("Brief blocks")).toBeVisible();
   await expect(brief.getByRole("link", { name: "Citation 1" }).first()).toBeVisible();
+  await expect(page.getByText(/AI confidence/i)).toHaveCount(0);
 
   const sourcePanel = page.getByRole("tabpanel", { name: "Source" });
   await sourcePanel.getByLabel("Mock webpage URL").fill("https://example.com/articles/local-brief-reset");
@@ -150,7 +152,19 @@ test("desktop workspace generates and resets a local deterministic brief", async
   await expect(
     regeneratedBrief.getByText("This mock webpage boundary represents a future article source without fetching the live page.").first(),
   ).toBeVisible();
+  await expect(regeneratedBrief.getByText("Citation audit: passed · 0 errors · 0 warnings")).toBeVisible();
   await expect(regeneratedBrief.getByRole("link", { name: "Citation 1" }).first()).toBeVisible();
+
+  await sourcePanel.getByLabel("Mock PDF filename").fill("lumina-boundary.pdf");
+  await sourcePanel.getByRole("button", { name: "Use mock PDF" }).click();
+  await expect(sourcePanel.getByText("Ready. Mock PDF loaded 3 segments with 3 citations.")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Local source-grounded brief" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Generate local brief" }).click();
+  const pdfBrief = page.getByRole("region", { name: "Local source-grounded brief" });
+  await expect(pdfBrief).toBeVisible();
+  await expect(pdfBrief.getByText("Citation audit: passed · 0 errors · 0 warnings")).toBeVisible();
+  await expect(pdfBrief.getByText("This mock PDF boundary represents a future uploaded or linked document source.").first()).toBeVisible();
   await expectNoHorizontalOverflow(page);
   expect(errors).toEqual([]);
 });
