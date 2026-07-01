@@ -123,6 +123,37 @@ test("desktop Source tab loads mock webpage and PDF boundaries", async ({ page }
   expect(errors).toEqual([]);
 });
 
+test("desktop workspace generates and resets a local deterministic brief", async ({ page }) => {
+  const errors = collectPageErrors(page);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Generate local brief" }).click();
+  const brief = page.getByRole("region", { name: "Local source-grounded brief" });
+  await expect(brief).toBeVisible();
+  await expect(brief.getByRole("heading", { name: "Local source-grounded brief" })).toBeVisible();
+  await expect(brief.getByText("Evidence cards")).toBeVisible();
+  await expect(brief.getByText("Brief blocks")).toBeVisible();
+  await expect(brief.getByRole("link", { name: "Citation 1" }).first()).toBeVisible();
+
+  const sourcePanel = page.getByRole("tabpanel", { name: "Source" });
+  await sourcePanel.getByLabel("Mock webpage URL").fill("https://example.com/articles/local-brief-reset");
+  await sourcePanel.getByLabel("Mock webpage title").fill("Local Brief Reset");
+  await sourcePanel.getByRole("button", { name: "Use mock webpage" }).click();
+  await expect(sourcePanel.getByText("Ready. Mock Webpage loaded 3 segments with 3 citations.")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Local source-grounded brief" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Generate local brief" }).click();
+  const regeneratedBrief = page.getByRole("region", { name: "Local source-grounded brief" });
+  await expect(regeneratedBrief).toBeVisible();
+  await expect(
+    regeneratedBrief.getByText("This mock webpage boundary represents a future article source without fetching the live page.").first(),
+  ).toBeVisible();
+  await expect(regeneratedBrief.getByRole("link", { name: "Citation 1" }).first()).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  expect(errors).toEqual([]);
+});
+
 test("tablet context drawer opens Source, Assistant, and Highlight without scrolling to document bottom", async ({ page }) => {
   const errors = collectPageErrors(page);
   await page.setViewportSize({ width: 1024, height: 900 });

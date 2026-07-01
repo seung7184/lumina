@@ -204,4 +204,59 @@ describe("WorkspaceShell", () => {
     expect(within(sourcePanel).getByText("Mock PDF boundary only; no PDF bytes were parsed.")).toBeInTheDocument();
     expect(within(sourcePanel).getByText("This mock PDF boundary represents a future uploaded or linked document source.")).toBeInTheDocument();
   });
+
+  it("generates a local deterministic brief with evidence, brief blocks, and citations", () => {
+    render(<WorkspaceShell demo={luminaDemo} />);
+
+    expect(screen.getByRole("button", { name: "Generate local brief" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Generate local brief" }));
+
+    const brief = screen.getByRole("region", { name: "Local source-grounded brief" });
+    expect(within(brief).getByRole("heading", { name: "Local source-grounded brief" })).toBeInTheDocument();
+    expect(within(brief).getByText("Generated from current source segments · no AI model used")).toBeInTheDocument();
+    expect(within(brief).getByText("Evidence cards")).toBeInTheDocument();
+    expect(within(brief).getByText("Brief blocks")).toBeInTheDocument();
+    expect(within(brief).getAllByText(/AI knowledge is severely lacking right now/i).length).toBeGreaterThan(0);
+    expect(within(brief).getAllByText(/Source-backed point:/i).length).toBeGreaterThan(0);
+    expect(within(brief).getAllByRole("link", { name: "Citation 1" }).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/AI analyzed/i)).not.toBeInTheDocument();
+  });
+
+  it("clears the local brief when a mock webpage or PDF source replaces the active source", async () => {
+    render(<WorkspaceShell demo={luminaDemo} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Generate local brief" }));
+    expect(screen.getByRole("region", { name: "Local source-grounded brief" })).toBeInTheDocument();
+
+    const sourcePanel = screen.getByRole("tabpanel", { name: /Source/i });
+    fireEvent.change(within(sourcePanel).getByLabelText("Mock webpage URL"), {
+      target: { value: "https://example.com/articles/lumina-boundary" },
+    });
+    fireEvent.click(within(sourcePanel).getByRole("button", { name: "Use mock webpage" }));
+
+    expect(await within(sourcePanel).findByText("Ready. Mock Webpage loaded 3 segments with 3 citations.")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Local source-grounded brief" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Generate local brief" }));
+    let brief = screen.getByRole("region", { name: "Local source-grounded brief" });
+    expect(brief).toBeInTheDocument();
+    expect(
+      within(brief).getAllByText("This mock webpage boundary represents a future article source without fetching the live page.").length,
+    ).toBeGreaterThan(0);
+
+    fireEvent.change(within(sourcePanel).getByLabelText("Mock PDF filename"), {
+      target: { value: "lumina-boundary.pdf" },
+    });
+    fireEvent.click(within(sourcePanel).getByRole("button", { name: "Use mock PDF" }));
+
+    expect(await within(sourcePanel).findByText("Ready. Mock PDF loaded 3 segments with 3 citations.")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Local source-grounded brief" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Generate local brief" }));
+    brief = screen.getByRole("region", { name: "Local source-grounded brief" });
+    expect(brief).toBeInTheDocument();
+    expect(
+      within(brief).getAllByText("This mock PDF boundary represents a future uploaded or linked document source.").length,
+    ).toBeGreaterThan(0);
+  });
 });

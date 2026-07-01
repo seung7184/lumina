@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   AssistantMessage,
   CitationRef,
+  DeterministicBrief,
   ExportOptions,
   IngestionWarning,
   LanguageCode,
@@ -32,6 +33,7 @@ import {
 } from "@/lib/future/ingestion-youtube";
 import { ingestMockPdfSource } from "@/lib/future/ingestion-pdf";
 import { ingestMockWebpageSource } from "@/lib/future/ingestion-web";
+import { generateDeterministicBrief } from "@/lib/future/brief-generator";
 
 interface WorkspaceShellProps {
   demo: LuminaDemoWorkspace;
@@ -66,6 +68,7 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [assistantDraft, setAssistantDraft] = useState("");
   const [localAssistantMessages, setLocalAssistantMessages] = useState<AssistantMessage[]>([]);
+  const [localBrief, setLocalBrief] = useState<DeterministicBrief | null>(null);
   const [feedback, setFeedback] = useState("");
   const [contextDrawerOpen, setContextDrawerOpen] = useState(false);
   const contextDrawerRef = useRef<HTMLElement>(null);
@@ -186,6 +189,17 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
     announce("Mock assistant response added with source citations.");
   }
 
+  function handleGenerateLocalBrief() {
+    const brief = generateDeterministicBrief({
+      source: workspace.source,
+      segments: workspace.segments,
+      citations: summary.citations,
+    });
+
+    setLocalBrief(brief);
+    announce(`Local source-grounded brief generated with ${brief.evidenceCards.length} evidence cards.`);
+  }
+
   async function handleIngestSourceUrl(url: string): Promise<SourceIngestionStatus> {
     try {
       const result = await ingestYouTubeSource({ kind: "youtube", url });
@@ -293,6 +307,7 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
   }
 
   function applyIngestionResult(source: SourceDocument, segments: SourceSegment[], citations: CitationRef[]) {
+    setLocalBrief(null);
     setWorkspace((current) => ({
       ...current,
       source,
@@ -352,7 +367,9 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
           reportModes={workspace.reportModes}
           source={workspace.source}
           summary={summary}
+          localBrief={localBrief}
           visualsEnabled={visualsEnabled}
+          onGenerateLocalBrief={handleGenerateLocalBrief}
           onLanguageChange={setLanguage}
           onMockAction={announce}
           onReportModeChange={setActiveModeId}
