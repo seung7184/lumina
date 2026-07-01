@@ -267,6 +267,9 @@ describe("WorkspaceShell", () => {
     expect(within(brief).getByText("Provider: Local Deterministic Brief · demo · No AI model used")).toBeInTheDocument();
     expect(within(brief).getByText("Citation audit: passed · 0 errors · 0 warnings")).toBeInTheDocument();
     expect(within(brief).getByText("Generation policy: allowed · source-grounded display enabled")).toBeInTheDocument();
+    expect(within(brief).getByText("Manual review: needs review · source-grounded: yes")).toBeInTheDocument();
+    expect(within(brief).getByRole("button", { name: "Approve locally" })).toBeEnabled();
+    expect(within(brief).getByRole("button", { name: "Reject locally" })).toBeEnabled();
     expect(within(brief).getByText("Evidence cards")).toBeInTheDocument();
     expect(within(brief).getByText("Brief blocks")).toBeInTheDocument();
     expect(within(brief).getByRole("button", { name: "Copy brief Markdown" })).toBeEnabled();
@@ -277,6 +280,25 @@ describe("WorkspaceShell", () => {
     expect(screen.queryByText(/AI confidence/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/AI analyzed/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /OpenAI brief|Anthropic brief|Gemini brief/i })).not.toBeInTheDocument();
+  });
+
+  it("supports local-only manual review approval and rejection for generated briefs", () => {
+    render(<WorkspaceShell demo={luminaDemo} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Generate local brief" }));
+    const brief = screen.getByRole("region", { name: "Local source-grounded brief" });
+
+    expect(within(brief).getByText("Manual review: needs review · source-grounded: yes")).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole("button", { name: "Approve locally" }));
+    expect(within(brief).getByText("Manual review: approved · source-grounded: yes")).toBeInTheDocument();
+    expect(within(brief).getByText("Approved locally after manual review.")).toBeInTheDocument();
+    expect(screen.getByText("Local brief approved for review use.")).toBeInTheDocument();
+
+    fireEvent.click(within(brief).getByRole("button", { name: "Reject locally" }));
+    expect(within(brief).getByText("Manual review: rejected · source-grounded: yes")).toBeInTheDocument();
+    expect(within(brief).getByText("Rejected locally for another pass.")).toBeInTheDocument();
+    expect(screen.getByText("Local brief marked rejected for another pass.")).toBeInTheDocument();
+    expect(screen.queryByText(/production/i)).not.toBeInTheDocument();
   });
 
   it("copies local brief and evidence cards as source-grounded Markdown", async () => {
@@ -360,27 +382,36 @@ describe("WorkspaceShell", () => {
       segments: luminaDemo.segments,
       citations: luminaDemo.summaries.en.citations,
     });
+    const blockedPolicy: DeterministicBrief["generationPolicy"] = {
+      id: "policy-blocked-test",
+      briefId: generatedBrief.id,
+      providerId: generatedBrief.providerId,
+      allowedToDisplay: false,
+      allowedToUseAsSourceGrounded: false,
+      issueCount: 1,
+      errorCount: 1,
+      warningCount: 0,
+      issues: [
+        {
+          id: "policy-blocked-test-issue-1",
+          code: "PROVIDER_USES_AI",
+          severity: "error",
+          message: "Generation provider uses AI and cannot be treated as local deterministic output.",
+          targetType: "provider",
+          targetId: generatedBrief.providerId,
+        },
+      ],
+    };
     const blockedBrief: DeterministicBrief = {
       ...generatedBrief,
-      generationPolicy: {
-        id: "policy-blocked-test",
+      generationPolicy: blockedPolicy,
+      review: {
+        id: `review-${generatedBrief.id}`,
         briefId: generatedBrief.id,
-        providerId: generatedBrief.providerId,
-        allowedToDisplay: false,
-        allowedToUseAsSourceGrounded: false,
-        issueCount: 1,
-        errorCount: 1,
-        warningCount: 0,
-        issues: [
-          {
-            id: "policy-blocked-test-issue-1",
-            code: "PROVIDER_USES_AI",
-            severity: "error",
-            message: "Generation provider uses AI and cannot be treated as local deterministic output.",
-            targetType: "provider",
-            targetId: generatedBrief.providerId,
-          },
-        ],
+        status: "needs_review",
+        reviewerNote: "",
+        canApprove: false,
+        sourceGrounded: false,
       },
     };
 
@@ -393,17 +424,24 @@ describe("WorkspaceShell", () => {
         summary={luminaDemo.summaries.en}
         localBrief={blockedBrief}
         visualsEnabled
+        onApproveLocalBrief={() => undefined}
         onCopyEvidenceCardsMarkdown={() => undefined}
         onCopyLocalBriefMarkdown={() => undefined}
         onGenerateLocalBrief={() => undefined}
         onLanguageChange={() => undefined}
         onMockAction={() => undefined}
+        onRejectLocalBrief={() => undefined}
         onReportModeChange={() => undefined}
       />,
     );
 
     const brief = screen.getByRole("region", { name: "Local source-grounded brief" });
     expect(within(brief).getByText("Generation policy: blocked · source-grounded display disabled")).toBeInTheDocument();
+    expect(within(brief).getByRole("button", { name: "Approve locally" })).toBeDisabled();
+    expect(within(brief).getByRole("button", { name: "Reject locally" })).toBeEnabled();
+    expect(
+      within(brief).getByText("Approval unavailable until citation audit and generation policy allow display."),
+    ).toBeInTheDocument();
     expect(within(brief).getByRole("button", { name: "Copy brief Markdown" })).toBeDisabled();
     expect(within(brief).getByRole("button", { name: "Copy evidence Markdown" })).toBeDisabled();
     expect(within(brief).getByText("Copy export unavailable while generation policy blocks display.")).toBeInTheDocument();

@@ -893,6 +893,64 @@ dd {
   line-height: 1.45;
 }
 
+.local-brief__review {
+  display: grid;
+  gap: 7px;
+  max-width: 760px;
+  border-left: 2px solid var(--p-amber);
+  padding-left: 10px;
+}
+
+.local-brief__review--approved {
+  border-left-color: var(--p-teal);
+}
+
+.local-brief__review--rejected {
+  border-left-color: var(--p-coral);
+}
+
+.local-brief__review p,
+.local-brief__review-note {
+  color: var(--p-ink-soft);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.local-brief__review span {
+  color: var(--p-text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.local-brief__review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.local-brief__review-actions button {
+  min-height: 32px;
+  border: 1px solid var(--p-line-strong);
+  border-radius: var(--radius-md);
+  background: var(--p-surface);
+  color: var(--p-ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0 10px;
+}
+
+.local-brief__review-actions button:not(:disabled):hover {
+  border-color: var(--p-teal);
+  color: var(--p-teal-deep);
+}
+
+.local-brief__review-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
 .local-brief__copy-actions {
   display: flex;
   flex-wrap: wrap;

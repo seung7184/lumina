@@ -31,10 +31,12 @@ interface ResearchDocumentProps {
   activeModeId: string;
   visualsEnabled: boolean;
   onGenerateLocalBrief: () => void;
+  onApproveLocalBrief: () => void;
   onCopyEvidenceCardsMarkdown: () => void;
   onCopyLocalBriefMarkdown: () => void;
   onLanguageChange: (language: LanguageCode) => void;
   onReportModeChange: (modeId: ReportMode["id"]) => void;
+  onRejectLocalBrief: () => void;
   onMockAction: (message: string) => void;
 }
 
@@ -47,10 +49,12 @@ export function ResearchDocument({
   activeModeId,
   visualsEnabled,
   onGenerateLocalBrief,
+  onApproveLocalBrief,
   onCopyEvidenceCardsMarkdown,
   onCopyLocalBriefMarkdown,
   onLanguageChange,
   onReportModeChange,
+  onRejectLocalBrief,
   onMockAction,
 }: ResearchDocumentProps) {
   const citationMap = new Map(summary.citations.map((citation) => [citation.id, citation]));
@@ -82,8 +86,10 @@ export function ResearchDocument({
           <LocalBriefSection
             brief={localBrief}
             citationMap={citationMap}
+            onApproveLocalBrief={onApproveLocalBrief}
             onCopyEvidenceCardsMarkdown={onCopyEvidenceCardsMarkdown}
             onCopyLocalBriefMarkdown={onCopyLocalBriefMarkdown}
+            onRejectLocalBrief={onRejectLocalBrief}
           />
         ) : null}
       </article>
@@ -94,16 +100,23 @@ export function ResearchDocument({
 function LocalBriefSection({
   brief,
   citationMap,
+  onApproveLocalBrief,
   onCopyEvidenceCardsMarkdown,
   onCopyLocalBriefMarkdown,
+  onRejectLocalBrief,
 }: {
   brief: DeterministicBrief;
   citationMap: Map<string, SummaryDocument["citations"][number]>;
+  onApproveLocalBrief: () => void;
   onCopyEvidenceCardsMarkdown: () => void;
   onCopyLocalBriefMarkdown: () => void;
+  onRejectLocalBrief: () => void;
 }) {
   const isPolicyBlocked = brief.generationPolicy?.allowedToDisplay === false;
   const disabledDescriptionId = `${brief.id}-copy-disabled`;
+  const reviewDescriptionId = `${brief.id}-review-disabled`;
+  const review = brief.review;
+  const approvalDisabled = !review?.canApprove || isPolicyBlocked;
 
   return (
     <section className="local-brief" aria-label="Local source-grounded brief">
@@ -118,6 +131,30 @@ function LocalBriefSection({
         ) : null}
         {brief.citationAudit ? <CitationAuditStatus audit={brief.citationAudit} /> : null}
         {brief.generationPolicy ? <GenerationPolicyStatus policy={brief.generationPolicy} /> : null}
+        {review ? (
+          <section className={`local-brief__review local-brief__review--${review.status}`} aria-label="Manual review status">
+            <p>Manual review: {formatReviewStatus(review.status)} · source-grounded: {review.sourceGrounded ? "yes" : "no"}</p>
+            {review.reviewerNote ? <span>{review.reviewerNote}</span> : null}
+            <div className="local-brief__review-actions">
+              <button
+                type="button"
+                disabled={approvalDisabled}
+                aria-describedby={approvalDisabled ? reviewDescriptionId : undefined}
+                onClick={onApproveLocalBrief}
+              >
+                Approve locally
+              </button>
+              <button type="button" onClick={onRejectLocalBrief}>
+                Reject locally
+              </button>
+            </div>
+            {approvalDisabled ? (
+              <span className="local-brief__review-note" id={reviewDescriptionId}>
+                Approval unavailable until citation audit and generation policy allow display.
+              </span>
+            ) : null}
+          </section>
+        ) : null}
         <div className="local-brief__copy-actions" aria-label="Local brief copy actions">
           <button
             type="button"
@@ -173,6 +210,14 @@ function LocalBriefSection({
       )}
     </section>
   );
+}
+
+function formatReviewStatus(status: NonNullable<DeterministicBrief["review"]>["status"]) {
+  if (status === "needs_review") {
+    return "needs review";
+  }
+
+  return status;
 }
 
 function CitationAuditStatus({ audit }: { audit: CitationAuditResult }) {
