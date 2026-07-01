@@ -10,7 +10,13 @@ interface TranscriptRowProps {
 
 export function TranscriptRow({ segment, active, showTranslation, onSelect }: TranscriptRowProps) {
   return (
-    <button className={`transcript-row ${active ? "is-active" : ""}`} type="button" onClick={onSelect}>
+    <button
+      aria-label={`Transcript segment ${segment.startTime}${active ? ", selected" : ""}`}
+      aria-pressed={active}
+      className={`transcript-row ${active ? "is-active" : ""}`}
+      type="button"
+      onClick={onSelect}
+    >
       <span className="transcript-time">{segment.startTime}</span>
       <span className="transcript-copy">
         <span className="ko-copy">{segment.text}</span>

@@ -6,6 +6,8 @@ interface SourceTabProps {
   source: SourceDocument;
   segments: SourceSegment[];
   activeSegmentId: string;
+  labelledBy: string;
+  panelId: string;
   showTranslation: boolean;
   onActiveSegmentChange: (id: string) => void;
   onMockAction: (message: string) => void;
@@ -16,13 +18,15 @@ export function SourceTab({
   source,
   segments,
   activeSegmentId,
+  labelledBy,
+  panelId,
   showTranslation,
   onActiveSegmentChange,
   onMockAction,
   onTranslationToggle,
 }: SourceTabProps) {
   return (
-    <div className="context-tab-body" role="tabpanel" aria-label="Source">
+    <div className="context-tab-body" role="tabpanel" id={panelId} aria-labelledby={labelledBy}>
       <div className="source-preview">
         <span className="source-preview__title ko-copy">{source.thumbnailLabel}</span>
         <span className="source-preview__play">

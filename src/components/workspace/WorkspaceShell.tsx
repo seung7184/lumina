@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   AssistantMessage,
   ExportOptions,
@@ -48,9 +48,17 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
   const [localAssistantMessages, setLocalAssistantMessages] = useState<AssistantMessage[]>([]);
   const [feedback, setFeedback] = useState("");
   const [contextDrawerOpen, setContextDrawerOpen] = useState(false);
+  const contextDrawerRef = useRef<HTMLElement>(null);
+  const contextDrawerCloseRef = useRef<HTMLButtonElement>(null);
+  const contextTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const summary = demo.summaries[language];
   const assistantMessages = [...demo.assistantMessages, ...localAssistantMessages];
+
+  const closeContextDrawer = useCallback(() => {
+    setContextDrawerOpen(false);
+    window.requestAnimationFrame(() => contextTriggerRef.current?.focus());
+  }, []);
 
   useEffect(() => {
     if (!feedback) {
@@ -67,13 +75,47 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setContextDrawerOpen(false);
+        event.preventDefault();
+        closeContextDrawer();
+        return;
+      }
+
+      if (event.key !== "Tab" || !contextDrawerRef.current) {
+        return;
+      }
+
+      const focusableElements = Array.from(
+        contextDrawerRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((element) => !element.hasAttribute("disabled") && element.getAttribute("aria-hidden") !== "true");
+
+      if (!focusableElements.length) {
+        return;
+      }
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
       }
     }
 
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.setTimeout(() => contextDrawerCloseRef.current?.focus(), 0);
+
     document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [contextDrawerOpen]);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [closeContextDrawer, contextDrawerOpen]);
 
   function announce(message: string) {
     setFeedback(message);
@@ -89,7 +131,8 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
     announce(`${prompt.label} added to the assistant composer.`);
   }
 
-  function openContextDrawer(tab: "source" | "assistant" | "highlight") {
+  function openContextDrawer(tab: "source" | "assistant" | "highlight", trigger: HTMLButtonElement) {
+    contextTriggerRef.current = trigger;
     setContextTab(tab);
     setContextDrawerOpen(true);
   }
@@ -197,7 +240,7 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
             className={contextTab === tab ? "is-active" : ""}
             key={tab}
             type="button"
-            onClick={() => openContextDrawer(tab)}
+            onClick={(event) => openContextDrawer(tab, event.currentTarget)}
           >
             {tab[0].toUpperCase() + tab.slice(1)}
           </button>
@@ -209,12 +252,13 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
             className="context-drawer-backdrop"
             type="button"
             aria-label="Dismiss context overlay"
-            onClick={() => setContextDrawerOpen(false)}
+            tabIndex={-1}
+            onClick={closeContextDrawer}
           />
-          <section className="context-drawer" role="dialog" aria-modal="true" aria-label="Context drawer">
+          <section className="context-drawer" role="dialog" aria-modal="true" aria-label="Context drawer" ref={contextDrawerRef}>
             <header className="context-drawer__header">
               <strong>{contextTab[0].toUpperCase() + contextTab.slice(1)}</strong>
-              <button type="button" aria-label="Close context drawer" onClick={() => setContextDrawerOpen(false)}>
+              <button type="button" aria-label="Close context drawer" ref={contextDrawerCloseRef} onClick={closeContextDrawer}>
                 <X size={16} aria-hidden="true" />
               </button>
             </header>
@@ -227,6 +271,7 @@ export function WorkspaceShell({ demo }: WorkspaceShellProps) {
               assistantPrompts={demo.assistantPrompts}
               assistantScope={assistantScope}
               highlights={demo.highlights}
+              idBase="context-drawer"
               responseMode={responseMode}
               segments={demo.segments}
               showTranslation={showTranslation}

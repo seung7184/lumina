@@ -27,6 +27,7 @@ export function AssistantComposer({
       <div className="mode-pills">
         {responseModes.map((mode) => (
           <button
+            aria-pressed={responseMode === mode}
             className={responseMode === mode ? "is-active" : ""}
             key={mode}
             type="button"
@@ -41,6 +42,7 @@ export function AssistantComposer({
           Ask anything about this source
         </label>
         <textarea
+          aria-describedby={`${id}-help`}
           id={id}
           value={draft}
           onChange={(event) => onDraftChange(event.target.value)}
@@ -59,7 +61,7 @@ export function AssistantComposer({
           </button>
         </div>
       </div>
-      <small>Answers are grounded in this source. Citations link to the transcript.</small>
+      <small id={`${id}-help`}>Answers are grounded in this source. Enter adds a new line; use the send button to submit.</small>
     </div>
   );
 }

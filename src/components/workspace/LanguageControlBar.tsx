@@ -17,6 +17,7 @@ export function LanguageControlBar({ language, onLanguageChange, onMockAction }:
         <span className="eyebrow">{copy.output}</span>
         <div className="segmented segmented--small" role="group" aria-label="Output language">
           <button
+            aria-pressed={language === "en"}
             className={language === "en" ? "is-active" : ""}
             type="button"
             onClick={() => onLanguageChange("en")}
@@ -24,6 +25,7 @@ export function LanguageControlBar({ language, onLanguageChange, onMockAction }:
             English
           </button>
           <button
+            aria-pressed={language === "ko"}
             className={language === "ko" ? "is-active" : ""}
             type="button"
             onClick={() => onLanguageChange("ko")}

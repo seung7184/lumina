@@ -17,7 +17,7 @@ const iconByPrompt: Record<string, React.ReactNode> = {
 
 export function SuggestedPromptCard({ prompt, onSelect }: SuggestedPromptCardProps) {
   return (
-    <button className="prompt-card" type="button" onClick={onSelect}>
+    <button className="prompt-card" type="button" aria-label={`Use suggested prompt: ${prompt.label}`} onClick={onSelect}>
       {iconByPrompt[prompt.id]}
       <span>
         <strong>{prompt.label}</strong>

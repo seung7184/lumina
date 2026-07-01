@@ -1,4 +1,5 @@
 import { Download, Eye, Grid2X2, Link2, Share2 } from "lucide-react";
+import { useRef } from "react";
 import type { ExportOptions, LanguageCode } from "@/lib/types/workspace";
 import { labels } from "@/lib/i18n/labels";
 import { ExportMenu } from "@/components/export/ExportMenu";
@@ -39,20 +40,37 @@ export function DocumentToolbar({
   onMockAction,
 }: DocumentToolbarProps) {
   const copy = labels[language];
+  const exportButtonRef = useRef<HTMLButtonElement>(null);
 
   return (
     <div className="document-toolbar" role="toolbar" aria-label="Document controls">
       <div className="segmented" role="group" aria-label="View mode">
-        <button className={mode === "summary" ? "is-active" : ""} type="button" onClick={() => onModeChange("summary")}>
+        <button
+          aria-pressed={mode === "summary"}
+          className={mode === "summary" ? "is-active" : ""}
+          type="button"
+          onClick={() => onModeChange("summary")}
+        >
           {copy.summary}
         </button>
-        <button className={mode === "expand" ? "is-active" : ""} type="button" onClick={() => onModeChange("expand")}>
+        <button
+          aria-pressed={mode === "expand"}
+          className={mode === "expand" ? "is-active" : ""}
+          type="button"
+          onClick={() => onModeChange("expand")}
+        >
           {copy.expand}
         </button>
       </div>
       <div className="segmented" role="group" aria-label="Length">
         {(["short", "base", "long"] as const).map((item) => (
-          <button className={length === item ? "is-active" : ""} key={item} type="button" onClick={() => onLengthChange(item)}>
+          <button
+            aria-pressed={length === item}
+            className={length === item ? "is-active" : ""}
+            key={item}
+            type="button"
+            onClick={() => onLengthChange(item)}
+          >
             {copy[item]}
           </button>
         ))}
@@ -60,6 +78,7 @@ export function DocumentToolbar({
       <div className="segmented" role="group" aria-label="Reading level">
         {(["easy", "standard", "expert"] as const).map((item) => (
           <button
+            aria-pressed={difficulty === item}
             className={difficulty === item ? "is-active" : ""}
             key={item}
             type="button"
@@ -71,10 +90,20 @@ export function DocumentToolbar({
       </div>
       <span className="toolbar-spacer" />
       <div className="segmented segmented--language" role="group" aria-label="Toolbar language">
-        <button className={language === "en" ? "is-active" : ""} type="button" onClick={() => onLanguageChange("en")}>
+        <button
+          aria-pressed={language === "en"}
+          className={language === "en" ? "is-active" : ""}
+          type="button"
+          onClick={() => onLanguageChange("en")}
+        >
           EN
         </button>
-        <button className={language === "ko" ? "is-active" : ""} type="button" onClick={() => onLanguageChange("ko")}>
+        <button
+          aria-pressed={language === "ko"}
+          className={language === "ko" ? "is-active" : ""}
+          type="button"
+          onClick={() => onLanguageChange("ko")}
+        >
           KR
         </button>
       </div>
@@ -101,7 +130,14 @@ export function DocumentToolbar({
         <Link2 size={16} aria-hidden="true" />
       </button>
       <div className="export-anchor">
-        <button className="toolbar-export" type="button" onClick={onExportToggle} aria-expanded={exportOpen}>
+        <button
+          className="toolbar-export"
+          type="button"
+          ref={exportButtonRef}
+          onClick={onExportToggle}
+          aria-expanded={exportOpen}
+          aria-haspopup="menu"
+        >
           <Download size={15} aria-hidden="true" />
           Export
         </button>
@@ -112,6 +148,7 @@ export function DocumentToolbar({
             onChange={onExportOptionsChange}
             onClose={onExportToggle}
             onMockAction={onMockAction}
+            returnFocusRef={exportButtonRef}
           />
         ) : null}
       </div>
