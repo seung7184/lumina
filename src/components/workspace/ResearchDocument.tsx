@@ -1,4 +1,13 @@
-import type { DocumentBlock, LanguageCode, ReportMode, SourceDocument, SummaryDocument } from "@/lib/types/workspace";
+import type {
+  BriefBlock,
+  DeterministicBrief,
+  DocumentBlock,
+  EvidenceCard,
+  LanguageCode,
+  ReportMode,
+  SourceDocument,
+  SummaryDocument,
+} from "@/lib/types/workspace";
 import { ActionItemsBlock } from "@/components/document-blocks/ActionItemsBlock";
 import { ClaimValidationBlock } from "@/components/document-blocks/ClaimValidationBlock";
 import { ConceptDiagramBlock } from "@/components/document-blocks/ConceptDiagramBlock";
@@ -13,10 +22,12 @@ import { TableOfContents } from "@/components/workspace/TableOfContents";
 interface ResearchDocumentProps {
   source: SourceDocument;
   summary: SummaryDocument;
+  localBrief: DeterministicBrief | null;
   language: LanguageCode;
   reportModes: ReportMode[];
   activeModeId: string;
   visualsEnabled: boolean;
+  onGenerateLocalBrief: () => void;
   onLanguageChange: (language: LanguageCode) => void;
   onReportModeChange: (modeId: ReportMode["id"]) => void;
   onMockAction: (message: string) => void;
@@ -25,10 +36,12 @@ interface ResearchDocumentProps {
 export function ResearchDocument({
   source,
   summary,
+  localBrief,
   language,
   reportModes,
   activeModeId,
   visualsEnabled,
+  onGenerateLocalBrief,
   onLanguageChange,
   onReportModeChange,
   onMockAction,
@@ -46,11 +59,95 @@ export function ResearchDocument({
           onMockAction={onMockAction}
         />
         <GroundingLegend language={language} sourceCoverage={summary.sourceCoverage} />
+        <div className="local-brief-action">
+          <div>
+            <strong>Local deterministic draft</strong>
+            <p>Uses current source segments only. No AI model is called.</p>
+          </div>
+          <button type="button" onClick={onGenerateLocalBrief}>
+            Generate local brief
+          </button>
+        </div>
         {summary.blocks.map((block) =>
           renderBlock(block, citationMap, visualsEnabled, reportModes, activeModeId, language, onReportModeChange, onMockAction),
         )}
+        {localBrief ? <LocalBriefSection brief={localBrief} citationMap={citationMap} /> : null}
       </article>
     </section>
+  );
+}
+
+function LocalBriefSection({
+  brief,
+  citationMap,
+}: {
+  brief: DeterministicBrief;
+  citationMap: Map<string, SummaryDocument["citations"][number]>;
+}) {
+  return (
+    <section className="local-brief" aria-label="Local source-grounded brief">
+      <header className="local-brief__header">
+        <span className="status-pill status-pill--success">Local deterministic draft</span>
+        <h2>{brief.title}</h2>
+        <p>{brief.subtitle}</p>
+      </header>
+      {brief.warnings.length ? (
+        <ul className="local-brief__warnings" aria-label="Local brief warnings">
+          {brief.warnings.map((warning) => (
+            <li key={`${warning.code}-${warning.message}`}>{warning.message}</li>
+          ))}
+        </ul>
+      ) : null}
+      <div className="local-brief__grid">
+        <section className="local-brief__group" aria-label="Evidence cards">
+          <h3>Evidence cards</h3>
+          {brief.evidenceCards.map((card) => (
+            <EvidenceCardView card={card} citationMap={citationMap} key={card.id} />
+          ))}
+        </section>
+        <section className="local-brief__group" aria-label="Brief blocks">
+          <h3>Brief blocks</h3>
+          {brief.blocks.map((block) => (
+            <BriefBlockView block={block} citationMap={citationMap} key={block.id} />
+          ))}
+        </section>
+      </div>
+    </section>
+  );
+}
+
+function EvidenceCardView({
+  card,
+  citationMap,
+}: {
+  card: EvidenceCard;
+  citationMap: Map<string, SummaryDocument["citations"][number]>;
+}) {
+  return (
+    <article className="evidence-card">
+      <header>
+        <span>{card.sourceTime ?? card.label}</span>
+        <h4>{card.title}</h4>
+      </header>
+      <p>{card.body}</p>
+      {renderCitations(card.citationIds, citationMap)}
+    </article>
+  );
+}
+
+function BriefBlockView({
+  block,
+  citationMap,
+}: {
+  block: BriefBlock;
+  citationMap: Map<string, SummaryDocument["citations"][number]>;
+}) {
+  return (
+    <article className="brief-block">
+      <h4>{block.title}</h4>
+      <p>{block.body}</p>
+      {renderCitations(block.citationIds, citationMap)}
+    </article>
   );
 }
 

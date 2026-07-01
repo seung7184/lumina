@@ -161,6 +161,40 @@ export interface IngestionWarning {
   severity: "info" | "warning" | "error";
 }
 
+export interface EvidenceCard {
+  id: string;
+  sourceId: string;
+  segmentIds: string[];
+  citationIds: string[];
+  label: string;
+  title: string;
+  body: string;
+  sourceTime?: string;
+  sourceUrl?: string;
+  kind: "claim" | "context" | "limitation" | "next-step";
+}
+
+export interface BriefBlock {
+  id: string;
+  title: string;
+  body: string;
+  citationIds: string[];
+  evidenceCardIds: string[];
+  kind: "overview" | "key-point" | "limitation" | "next-step";
+}
+
+export interface DeterministicBrief {
+  id: string;
+  sourceId: string;
+  title: string;
+  subtitle: string;
+  generatedBy: "local-deterministic";
+  evidenceCards: EvidenceCard[];
+  blocks: BriefBlock[];
+  citationIds: string[];
+  warnings: IngestionWarning[];
+}
+
 export interface IngestionResult {
   sourceMetadata: SourceMetadata;
   segments: NormalizedSourceSegment[];
