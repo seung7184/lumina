@@ -100,6 +100,38 @@ describe("WorkspaceShell", () => {
     expect(within(sourcePanel).queryByRole("button", { name: "PDF OCR" })).not.toBeInTheDocument();
   });
 
+  it("shows source-grounded pipeline status before generation, after generation, and after source reset", async () => {
+    render(<WorkspaceShell demo={luminaDemo} />);
+
+    const sourcePanel = screen.getByRole("tabpanel", { name: /Source/i });
+    const pipeline = within(sourcePanel).getByRole("region", { name: "Source-grounded pipeline status" });
+
+    expect(within(pipeline).getByText("Source provider → Generation provider → Citation audit → Policy gate")).toBeInTheDocument();
+    expect(within(pipeline).getByText("Source: Mock YouTube Transcript · demo")).toBeInTheDocument();
+    expect(within(pipeline).getByText("Generation: not generated yet")).toBeInTheDocument();
+    expect(within(pipeline).getByText("Citation audit: pending")).toBeInTheDocument();
+    expect(within(pipeline).getByText("Policy gate: pending")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Generate local brief" }));
+
+    expect(within(pipeline).getByText("Generation: Local Deterministic Brief · demo")).toBeInTheDocument();
+    expect(within(pipeline).getByText("Citation audit: passed")).toBeInTheDocument();
+    expect(within(pipeline).getByText("Policy gate: allowed")).toBeInTheDocument();
+    expect(screen.queryByText(/AI confidence/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /OpenAI brief|Anthropic brief|Gemini brief/i })).not.toBeInTheDocument();
+
+    fireEvent.change(within(sourcePanel).getByLabelText("Mock webpage URL"), {
+      target: { value: "https://example.com/articles/pipeline-reset" },
+    });
+    fireEvent.click(within(sourcePanel).getByRole("button", { name: "Use mock webpage" }));
+
+    expect(await within(sourcePanel).findByText("Ready. Mock Webpage loaded 3 segments with 3 citations.")).toBeInTheDocument();
+    expect(within(pipeline).getByText("Source: Mock Webpage · demo")).toBeInTheDocument();
+    expect(within(pipeline).getByText("Generation: not generated yet")).toBeInTheDocument();
+    expect(within(pipeline).getByText("Citation audit: pending")).toBeInTheDocument();
+    expect(within(pipeline).getByText("Policy gate: pending")).toBeInTheDocument();
+  });
+
   it("shows calm Source-tab feedback for unsupported ingestion URLs", async () => {
     render(<WorkspaceShell demo={luminaDemo} />);
 
