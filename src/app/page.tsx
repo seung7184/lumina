@@ -1,6 +1,5 @@
-import { WorkspaceShell } from "@/components/workspace/WorkspaceShell";
-import { luminaDemo } from "@/lib/mock/lumina-demo";
+import { LandingPage } from "@/components/landing/LandingPage";
 
 export default function Home() {
-  return <WorkspaceShell demo={luminaDemo} />;
+  return <LandingPage />;
 }
