@@ -1,6 +1,12 @@
-import { WorkspaceShell } from "@/components/workspace/WorkspaceShell";
-import { luminaDemo } from "@/lib/mock/lumina-demo";
+"use client";
+
+import dynamic from "next/dynamic";
+
+const FunctionalWorkspace = dynamic(
+  () => import("@/components/workspace/FunctionalWorkspace").then((m) => ({ default: m.FunctionalWorkspace })),
+  { ssr: false },
+);
 
 export default function WorkspacePage() {
-  return <WorkspaceShell demo={luminaDemo} />;
+  return <FunctionalWorkspace />;
 }
