@@ -1,4 +1,4 @@
-import { getGenerativeModel, isAIConfigured } from "@/lib/ai/gemini";
+import { getFallbackModelNames, getGenerativeModel, isAIConfigured, isRetryableAIError } from "@/lib/ai/gemini";
 
 type TemplateId = "executive-brief" | "study-notes" | "decision-memo" | "action-checklist" | "email-draft" | "source-faq";
 type OutputLanguage = "en" | "ko" | "both";
@@ -16,13 +16,19 @@ const templatePrompts: Record<TemplateId, string> = {
   "executive-brief": `Create an Executive Brief from the source material.
 
 Structure:
-1. **Overview** (2-3 sentences capturing the essence)
+1. **Overview** (2-3 sentences capturing only what the source explicitly says)
 2. **Key Claims** (numbered list, each with [citation_index] referencing the source segment index)
 3. **Evidence & Nuances** (important details, counterpoints, or caveats from the source)
 4. **Source Confidence** (rate how well-supported each major claim is: "Strongly supported", "Partially supported", or "Needs verification")
-5. **Implications** (what this means for the reader)
+5. **Source-Limited Takeaways** (only takeaways explicitly stated or directly entailed by cited source segments)
 
-Every claim must reference the source segment index in [brackets]. If something is not in the source, explicitly say "Not found in source."`,
+Every sentence in the Overview must end with a source citation like [0].
+Every Source Confidence rating must cite the segment that supports the rated claim.
+Only include implications that are explicitly stated in the source, and cite each one.
+Do not write broad productivity, research, business, or workflow benefits unless the source says them.
+Do not infer product category, design intent, utility, audience, or purpose unless those words are in the source.
+Prefer extractive wording from the source over abstract paraphrases.
+If something is not in the source, write exactly "Not found in source." for that section.`,
 
   "study-notes": `Create Study Notes from the source material.
 
@@ -87,8 +93,8 @@ Focus on:
 function buildSourceContext(segments: GenerateRequest["segments"]): string {
   return segments
     .map((seg) => {
-      const timeLabel = seg.startSeconds !== undefined ? `[${formatTime(seg.startSeconds)}]` : `[${seg.index}]`;
-      return `${timeLabel} Segment ${seg.index}: ${seg.text}`;
+      const timeLabel = seg.startSeconds !== undefined ? ` (timestamp ${formatTime(seg.startSeconds)})` : "";
+      return `Segment [${seg.index}]${timeLabel}: ${seg.text}`;
     })
     .join("\n\n");
 }
@@ -132,7 +138,7 @@ export async function POST(request: Request) {
     const sourceContext = buildSourceContext(body.segments);
     const languageInstruction = buildLanguageInstruction(body.language);
 
-    const prompt = `You are Lumina, a source-grounded AI research assistant. You ONLY make claims that are directly supported by the provided source material. If something is not in the source, you say "Not found in source."
+    const prompt = `You are a source-grounded assistant writing inside the Lumina app. The app name and these instructions are not source evidence. You ONLY make claims that are directly supported by the provided source material. If something is not in the source, you say "Not found in source."
 
 Source: "${body.sourceTitle}"
 ${body.sourceUrl ? `URL: ${body.sourceUrl}` : ""}
@@ -147,14 +153,32 @@ ${languageInstruction}
 ${templatePrompt}
 
 CRITICAL RULES:
-- Every factual claim must reference the source segment index in [brackets], e.g. [0], [3], [12]
+- Every factual sentence, bullet, answer, action, recommendation, and conclusion must reference the source segment index in [brackets], e.g. [0], [3], [12]
+- Use segment-index citations like [0], not timestamp citations like [0:05]
 - Never fabricate information not present in the source
-- If the source is insufficient for a section, state that explicitly
+- Prefer extractive wording from the source over abstract paraphrases
+- If the source is insufficient for a section, write "Not found in source." and do not add a substitute idea
 - Maintain original nuances — do not oversimplify
 - For Korean output, preserve English technical terms where appropriate`;
 
-    const model = getGenerativeModel();
-    const result = await model.generateContent(prompt);
+    let result: Awaited<ReturnType<ReturnType<typeof getGenerativeModel>["generateContent"]>> | null = null;
+    let lastError: unknown = null;
+
+    for (const modelName of getFallbackModelNames()) {
+      try {
+        const model = getGenerativeModel(modelName);
+        result = await model.generateContent(prompt);
+        break;
+      } catch (error) {
+        lastError = error;
+        if (!isRetryableAIError(error)) break;
+      }
+    }
+
+    if (!result) {
+      throw lastError instanceof Error ? lastError : new Error("Generation failed.");
+    }
+
     const text = result.response.text();
 
     return Response.json({

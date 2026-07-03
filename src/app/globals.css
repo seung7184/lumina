@@ -4669,18 +4669,41 @@ dd {
 
 @media (max-width: 900px) {
   .functional-workspace {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    height: auto;
   }
 
   .functional-workspace.sidebar-collapsed {
-    grid-template-columns: 1fr;
+    display: flex;
   }
 
   .fw-sidebar {
-    display: none;
+    display: flex;
+    height: auto;
+    max-height: none;
+    border-right: 0;
+    border-bottom: 1px solid var(--p-line);
+    overflow: visible;
+  }
+
+  .fw-main {
+    height: auto;
+    min-height: 55vh;
+    overflow: visible;
+  }
+
+  .fw-brief-area {
+    overflow: visible;
   }
 
   .fw-context {
-    display: none;
+    display: flex;
+    height: auto;
+    max-height: 70vh;
+    border-left: 0;
+    border-top: 1px solid var(--p-line);
+    overflow: hidden;
   }
 }

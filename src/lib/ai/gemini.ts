@@ -12,8 +12,32 @@ function getClient(): GoogleGenerativeAI {
   return genAI;
 }
 
-export function getGenerativeModel(modelName = "gemini-2.0-flash") {
-  return getClient().getGenerativeModel({ model: modelName });
+const DEFAULT_MODEL = "gemini-2.5-flash-lite";
+const FALLBACK_MODEL = "gemini-2.5-flash";
+
+export function getFallbackModelNames(preferredModel = process.env.GEMINI_MODEL || DEFAULT_MODEL): string[] {
+  return Array.from(new Set([preferredModel, FALLBACK_MODEL]));
+}
+
+export function isRetryableAIError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const message = error.message.toLowerCase();
+  return message.includes("503")
+    || message.includes("service unavailable")
+    || message.includes("high demand")
+    || message.includes("429")
+    || message.includes("too many requests")
+    || message.includes("quota exceeded");
+}
+
+export function getGenerativeModel(modelName = process.env.GEMINI_MODEL || DEFAULT_MODEL) {
+  return getClient().getGenerativeModel({
+    model: modelName,
+    generationConfig: {
+      temperature: 0.2,
+      topP: 0.8,
+    },
+  });
 }
 
 export function isAIConfigured(): boolean {
