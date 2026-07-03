@@ -3,7 +3,7 @@ import { expect, type Page, test } from "@playwright/test";
 function collectPageErrors(page: Page) {
   const errors: string[] = [];
   page.on("console", (message) => {
-    if (message.type() === "error") {
+    if (message.type() === "error" && !message.text().includes("Download the React DevTools")) {
       errors.push(message.text());
     }
   });
@@ -18,253 +18,108 @@ async function expectNoHorizontalOverflow(page: Page) {
   expect(hasOverflow).toBe(false);
 }
 
-async function tabUntilFocused(page: Page, accessibleName: string | RegExp, maxTabs = 60) {
-  const target = page.getByRole("button", { name: accessibleName });
-  for (let index = 0; index < maxTabs; index += 1) {
-    if (await target.evaluate((element) => element === document.activeElement).catch(() => false)) {
-      return;
-    }
-    await page.keyboard.press("Tab");
-  }
-  await expect(target).toBeFocused();
+async function mockAI(page: Page) {
+  await page.route("**/api/generate", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        content: [
+          "**Executive Brief**",
+          "",
+          "Lumina converts raw meeting notes into cited decision briefs [0].",
+          "",
+          "- Product teams compare evidence before writing launch notes [1].",
+        ].join("\n"),
+        template: "executive-brief",
+        language: "en",
+        segmentCount: 2,
+        sourceTitle: "Nova Source",
+      }),
+    });
+  });
+
+  await page.route("**/api/chat", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        response: "The source says Lumina converts raw meeting notes into cited decision briefs [0].",
+        language: "en",
+      }),
+    });
+  });
 }
 
-test("desktop workspace loads and core interactions work", async ({ page }) => {
+async function openCleanWorkspace(page: Page, width = 1280, height = 900) {
+  await page.setViewportSize({ width, height });
+  await mockAI(page);
+  await page.addInitScript(() => window.localStorage.clear());
+  await page.goto("/workspace");
+  await expect(page.getByRole("heading", { name: "Welcome to Lumina" })).toBeVisible();
+}
+
+async function addTextSource(page: Page) {
+  await page.getByRole("button", { name: "Text" }).click();
+  await page.getByPlaceholder("Paste text content...").fill(
+    "Nova source says Lumina converts raw meeting notes into cited decision briefs.\n\nNova source says product teams compare evidence before writing launch notes.",
+  );
+  await page.getByRole("button", { name: "Add source" }).click();
+  await expect(page.getByText(/Source loaded: 2 segments extracted/)).toBeVisible();
+  await expect(page.getByText("2 segments ready for analysis")).toBeVisible();
+}
+
+test("landing page opens the functional workspace", async ({ page }) => {
   const errors = collectPageErrors(page);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { name: /People Losing Everything/i })).toBeVisible();
-  await expect(page.getByText("AI literacy creates widening outcomes")).toBeVisible();
-  await expectNoHorizontalOverflow(page);
-
-  await tabUntilFocused(page, "KR");
-  await page.keyboard.press("Enter");
-  await expect(page.getByRole("heading", { name: /AI로 전재산을 날리는 사람들과 시간이 무한해진 사람들/ })).toBeVisible();
-  await expect(page.getByText("AI 문해력이 만드는 결과의 격차")).toBeVisible();
-
-  await page.getByRole("tab", { name: "Assistant" }).click();
-  await page.getByLabel("Ask anything about this source").fill("What claim needs validation first?");
-  await page.getByRole("button", { name: "Send assistant question" }).click();
-  await expect(page.getByText(/Mock response queued from this source/)).toBeVisible();
-
-  await page.getByRole("tab", { name: "Highlight" }).click();
-  await expect(page.getByText("Key claims")).toBeVisible();
-
-  await page.getByRole("tab", { name: "Source" }).click();
-  const sourcePanel = page.getByRole("tabpanel", { name: "Source" });
-  await sourcePanel.getByRole("button", { name: "View provider catalog" }).click();
-  const providerCatalog = sourcePanel.getByRole("region", { name: "Source provider catalog" });
-  await expect(providerCatalog).toBeVisible();
-  await expect(providerCatalog.getByText("YouTube mock", { exact: true })).toBeVisible();
-  await expect(providerCatalog.getByText("PDF OCR", { exact: true })).toBeVisible();
-  await expect(providerCatalog.getByText("Placeholder").first()).toBeVisible();
-  await expect(sourcePanel.getByRole("button", { name: "PDF OCR" })).toHaveCount(0);
-
-  const exportButton = page.getByRole("button", { name: "Export", exact: true });
-  await expect(exportButton).toHaveAttribute("aria-haspopup", "dialog");
-  await exportButton.click();
-  await expect(page.getByRole("dialog", { name: "Export options" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Close export menu" })).toBeFocused();
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: "Export options" })).toBeHidden();
-  await expect(exportButton).toBeFocused();
+  await expect(page.getByRole("heading", { name: "Lumina" })).toBeVisible();
+  await page.getByRole("link", { name: "Start for free" }).click();
+  await expect(page).toHaveURL(/\/workspace$/);
+  await expect(page.getByRole("heading", { name: "Welcome to Lumina" })).toBeVisible();
   await expectNoHorizontalOverflow(page);
   expect(errors).toEqual([]);
 });
 
-test("desktop Source tab accepts a local manual transcript paste", async ({ page }) => {
+test("desktop workspace ingests text, generates a brief, and chats from the source", async ({ page }) => {
   const errors = collectPageErrors(page);
-  await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto("/");
+  await openCleanWorkspace(page);
 
-  const sourcePanel = page.getByRole("tabpanel", { name: "Source" });
-  await sourcePanel.getByRole("button", { name: "Paste manual transcript" }).click();
-  await sourcePanel.getByRole("button", { name: "Use manual transcript" }).click();
-  await expect(sourcePanel.getByText("Paste transcript text first.")).toBeVisible();
+  await addTextSource(page);
+  await expect(page.getByText("Sources (1)")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Nova source says Lumina converts raw meeting notes/ })).toBeVisible();
+  await expect(page.getByText("[0]")).toBeVisible();
+  await expect(page.getByText("[1]")).toBeVisible();
 
-  await sourcePanel.getByLabel("Manual title").fill("Manual fallback source");
-  await sourcePanel.getByLabel("Manual language").fill("ko");
-  await sourcePanel.getByLabel("Manual transcript text").fill("[00:12] First pasted line\n00:24 - 00:30 Second pasted line");
-  await sourcePanel.getByRole("button", { name: "Use manual transcript" }).click();
+  await page.getByRole("button", { name: "Use at Work" }).click();
+  await expect(page.getByRole("heading", { name: "Executive Brief" })).toBeVisible();
+  await expect(page.locator(".fw-brief-content").getByText("cited decision briefs")).toBeVisible();
+  await expect(page.locator(".fw-brief-content").getByText("[0]")).toBeVisible();
 
-  await expect(sourcePanel.getByText("Ready. Manual Transcript loaded 2 segments with 2 citations.")).toBeVisible();
-  await expect(sourcePanel.getByText("Provider: Manual Transcript · experimental reliability")).toBeVisible();
-  await expect(sourcePanel.getByText("First pasted line")).toBeVisible();
-  await expect(page.getByText("AI literacy creates widening outcomes")).toBeVisible();
+  await page.getByRole("button", { name: "Ask" }).click();
+  await page.getByPlaceholder("Ask about this source...").fill("What does the source say?");
+  await page.locator(".fw-chat-composer button").click();
+  await expect(page.getByText("The source says Lumina converts raw meeting notes")).toBeVisible();
   await expectNoHorizontalOverflow(page);
   expect(errors).toEqual([]);
 });
 
-test("desktop Source tab loads mock webpage and PDF boundaries", async ({ page }) => {
+test("mobile workspace keeps source input and chat reachable", async ({ page }) => {
   const errors = collectPageErrors(page);
-  await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto("/");
+  await openCleanWorkspace(page, 390, 844);
 
-  const sourcePanel = page.getByRole("tabpanel", { name: "Source" });
-
-  await sourcePanel.getByRole("button", { name: "Use mock webpage" }).click();
-  await expect(sourcePanel.getByText("Enter a webpage URL first.")).toBeVisible();
-
-  await sourcePanel.getByLabel("Mock webpage URL").fill("https://example.com/articles/lumina-boundary");
-  await sourcePanel.getByLabel("Mock webpage title").fill("Lumina Boundary Notes");
-  await sourcePanel.getByRole("button", { name: "Use mock webpage" }).click();
-  await expect(sourcePanel.getByText("Ready. Mock Webpage loaded 3 segments with 3 citations.")).toBeVisible();
-  await expect(sourcePanel.getByText("Segments: 3")).toBeVisible();
-  await expect(sourcePanel.getByText("Citations: 3")).toBeVisible();
-  await expect(sourcePanel.getByText("This mock webpage boundary represents a future article source without fetching the live page.")).toBeVisible();
-
-  await sourcePanel.getByLabel("Mock PDF filename").fill("lumina-boundary.pdf");
-  await sourcePanel.getByRole("button", { name: "Use mock PDF" }).click();
-  await expect(sourcePanel.getByText("Ready. Mock PDF loaded 3 segments with 3 citations.")).toBeVisible();
-  await expect(sourcePanel.getByText("Mock PDF boundary only; no PDF bytes were parsed.")).toBeVisible();
-  await expect(sourcePanel.getByText("This mock PDF boundary represents a future uploaded or linked document source.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Text" })).toBeVisible();
+  await addTextSource(page);
+  await expect(page.getByRole("button", { name: "Ask" })).toBeVisible();
+  await page.getByRole("button", { name: "Ask" }).click();
+  await expect(page.getByPlaceholder("Ask about this source...")).toBeVisible();
   await expectNoHorizontalOverflow(page);
   expect(errors).toEqual([]);
 });
 
-test("desktop workspace generates and resets a local deterministic brief", async ({ page }) => {
-  const errors = collectPageErrors(page);
-  await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto("/");
-
-  const sourcePanel = page.getByRole("tabpanel", { name: "Source" });
-  const pipeline = sourcePanel.getByRole("region", { name: "Source-grounded pipeline status" });
-  const collectionBoundary = sourcePanel.getByRole("region", { name: "Source collection boundary" });
-  await expect(pipeline.getByText("Source provider → Generation provider → Citation audit → Policy gate")).toBeVisible();
-  await expect(pipeline.getByText("Source: Mock YouTube Transcript · demo")).toBeVisible();
-  await expect(pipeline.getByText("Generation: not generated yet")).toBeVisible();
-  await expect(pipeline.getByText("Citation audit: pending")).toBeVisible();
-  await expect(pipeline.getByText("Policy gate: pending")).toBeVisible();
-  await expect(collectionBoundary.getByText("Single source reference · no cross-source synthesis")).toBeVisible();
-  await expect(collectionBoundary.getByText("Local brief binding: pending")).toBeVisible();
-
-  await page.getByRole("button", { name: "Generate local brief" }).click();
-  const brief = page.getByRole("region", { name: "Local source-grounded brief" });
-  await expect(brief).toBeVisible();
-  await expect(brief.getByRole("heading", { name: "Local source-grounded brief" })).toBeVisible();
-  await expect(brief.getByText("Provider: Local Deterministic Brief · demo · No AI model used")).toBeVisible();
-  await expect(brief.getByText("Citation audit: passed · 0 errors · 0 warnings")).toBeVisible();
-  await expect(brief.getByText("Generation policy: allowed · source-grounded display enabled")).toBeVisible();
-  await expect(brief.getByText("Manual review: needs review · source-grounded: yes")).toBeVisible();
-  await expect(brief.getByRole("button", { name: "Approve locally" })).toBeEnabled();
-  await brief.getByRole("button", { name: "Approve locally" }).click();
-  await expect(brief.getByText("Manual review: approved · source-grounded: yes")).toBeVisible();
-  await brief.getByRole("button", { name: "Reject locally" }).click();
-  await expect(brief.getByText("Manual review: rejected · source-grounded: yes")).toBeVisible();
-  await expect(page.getByText(/production/i)).toHaveCount(0);
-  await expect(brief.getByText("Evidence cards")).toBeVisible();
-  await expect(brief.getByText("Brief blocks")).toBeVisible();
-  await expect(brief.getByRole("button", { name: "Copy brief Markdown" })).toBeVisible();
-  await expect(brief.getByRole("button", { name: "Copy evidence Markdown" })).toBeVisible();
-  await expect(brief.getByRole("link", { name: "Citation 1" }).first()).toBeVisible();
-  await expect(pipeline.getByText("Generation: Local Deterministic Brief · demo")).toBeVisible();
-  await expect(pipeline.getByText("Citation audit: passed")).toBeVisible();
-  await expect(pipeline.getByText("Policy gate: allowed")).toBeVisible();
-  await expect(collectionBoundary.getByText("Local brief binding: active source only · src-youtube-511ctokiroU")).toBeVisible();
-  await expect(page.getByText(/AI confidence/i)).toHaveCount(0);
-
-  await sourcePanel.getByLabel("Mock webpage URL").fill("https://example.com/articles/local-brief-reset");
-  await sourcePanel.getByLabel("Mock webpage title").fill("Local Brief Reset");
-  await sourcePanel.getByRole("button", { name: "Use mock webpage" }).click();
-  await expect(sourcePanel.getByText("Ready. Mock Webpage loaded 3 segments with 3 citations.")).toBeVisible();
-  await expect(page.getByRole("region", { name: "Local source-grounded brief" })).toHaveCount(0);
-  await expect(pipeline.getByText("Source: Mock Webpage · demo")).toBeVisible();
-  await expect(pipeline.getByText("Generation: not generated yet")).toBeVisible();
-  await expect(pipeline.getByText("Citation audit: pending")).toBeVisible();
-  await expect(pipeline.getByText("Policy gate: pending")).toBeVisible();
-  await expect(collectionBoundary.getByText("2 source references · active-source-only generation · no cross-source synthesis")).toBeVisible();
-  await expect(collectionBoundary.getByText("Local Brief Reset · active source")).toBeVisible();
-  await expect(collectionBoundary.getByText("Local brief binding: pending")).toBeVisible();
-
-  await page.getByRole("button", { name: "Generate local brief" }).click();
-  const regeneratedBrief = page.getByRole("region", { name: "Local source-grounded brief" });
-  await expect(regeneratedBrief).toBeVisible();
-  await expect(
-    regeneratedBrief.getByText("This mock webpage boundary represents a future article source without fetching the live page.").first(),
-  ).toBeVisible();
-  await expect(regeneratedBrief.getByText("Citation audit: passed · 0 errors · 0 warnings")).toBeVisible();
-  await expect(regeneratedBrief.getByText("Generation policy: allowed · source-grounded display enabled")).toBeVisible();
-  await expect(regeneratedBrief.getByRole("link", { name: "Citation 1" }).first()).toBeVisible();
-  await expect(
-    collectionBoundary.getByText("Local brief binding: active source only · src-webpage-example-com-articles-local-brief-reset"),
-  ).toBeVisible();
-
-  await sourcePanel.getByLabel("Mock PDF filename").fill("lumina-boundary.pdf");
-  await sourcePanel.getByRole("button", { name: "Use mock PDF" }).click();
-  await expect(sourcePanel.getByText("Ready. Mock PDF loaded 3 segments with 3 citations.")).toBeVisible();
-  await expect(page.getByRole("region", { name: "Local source-grounded brief" })).toHaveCount(0);
-
-  await page.getByRole("button", { name: "Generate local brief" }).click();
-  const pdfBrief = page.getByRole("region", { name: "Local source-grounded brief" });
-  await expect(pdfBrief).toBeVisible();
-  await expect(pdfBrief.getByText("Citation audit: passed · 0 errors · 0 warnings")).toBeVisible();
-  await expect(pdfBrief.getByText("Generation policy: allowed · source-grounded display enabled")).toBeVisible();
-  await expect(pdfBrief.getByText("This mock PDF boundary represents a future uploaded or linked document source.").first()).toBeVisible();
-  await expectNoHorizontalOverflow(page);
-  expect(errors).toEqual([]);
-});
-
-test("tablet context drawer opens Source, Assistant, and Highlight without scrolling to document bottom", async ({ page }) => {
-  const errors = collectPageErrors(page);
-  await page.setViewportSize({ width: 1024, height: 900 });
-  await page.goto("/");
-  await expectNoHorizontalOverflow(page);
-
-  await page.getByRole("button", { name: "Open Source context" }).click();
-  const drawer = page.getByRole("dialog", { name: "Context drawer" });
-  await expect(drawer).toBeVisible();
-  await expect(drawer.getByRole("button", { name: "Close context drawer" })).toBeFocused();
-  await expect(drawer.getByRole("tabpanel", { name: "Source" })).toBeVisible();
-
-  await page.keyboard.press("Tab");
-  await expect(drawer.getByRole("tab", { name: "Source" })).toBeFocused();
-  await page.keyboard.press("ArrowRight");
-  await expect(drawer.getByRole("tab", { name: "Assistant" })).toBeFocused();
-  await expect(drawer.getByRole("tabpanel", { name: "Assistant" })).toBeVisible();
-
-  await drawer.getByRole("tab", { name: "Assistant" }).click();
-  await expect(drawer.getByLabel("Ask anything about this source")).toBeVisible();
-
-  await drawer.getByRole("tab", { name: "Highlight" }).click();
-  await expect(drawer.getByText("Key claims")).toBeVisible();
-
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: "Context drawer" })).toBeHidden();
-  await expect(page.getByRole("button", { name: "Open Source context" })).toBeFocused();
-  await expectNoHorizontalOverflow(page);
-  expect(errors).toEqual([]);
-});
-
-test("mobile context sheet opens and closes from the sticky context bar", async ({ page }) => {
-  const errors = collectPageErrors(page);
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
-  await expectNoHorizontalOverflow(page);
-
-  await page.getByRole("button", { name: "Open Assistant context" }).click();
-  const sheet = page.getByRole("dialog", { name: "Context drawer" });
-  await expect(sheet).toBeVisible();
-  await expect(sheet.getByRole("button", { name: "Close context drawer" })).toBeFocused();
-  await sheet.getByLabel("Ask anything about this source").fill("Summarize the first claim.");
-  await sheet.getByRole("button", { name: "Send assistant question" }).click();
-  await expect(sheet.getByText(/Mock response queued from this source/)).toBeVisible();
-
-  await page.getByRole("button", { name: "Close context drawer" }).click();
-  await expect(page.getByRole("dialog", { name: "Context drawer" })).toBeHidden();
-
-  await page.getByRole("button", { name: "Open Highlight context" }).click();
-  await expect(page.getByRole("dialog", { name: "Context drawer" }).getByText("Key claims")).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: "Context drawer" })).toBeHidden();
-  await expectNoHorizontalOverflow(page);
-  expect(errors).toEqual([]);
-});
-
-test("major breakpoints do not introduce horizontal overflow", async ({ page }) => {
+test("major workspace breakpoints do not introduce horizontal overflow", async ({ page }) => {
   for (const width of [1280, 1024, 390]) {
-    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
-    await page.goto("/");
+    await openCleanWorkspace(page, width, width === 390 ? 844 : 900);
+    await addTextSource(page);
     await expectNoHorizontalOverflow(page);
   }
 });

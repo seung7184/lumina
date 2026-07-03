@@ -4128,7 +4128,7 @@ dd {
   color: var(--p-text-muted);
 }
 
-.fw-brief-area__empty h3 {
+.fw-brief-area__empty h1 {
   margin: 16px 0 8px;
   font-size: 18px;
   color: var(--p-ink);
@@ -4142,7 +4142,7 @@ dd {
 .fw-brief-area__segment-count {
   margin-top: 8px;
   font-size: 13px;
-  color: var(--p-teal);
+  color: var(--p-teal-deep);
   font-weight: 500;
 }
 
@@ -4152,7 +4152,7 @@ dd {
   margin-bottom: 20px;
 }
 
-.fw-brief-content__header h2 {
+.fw-brief-content__header h1 {
   font-size: 22px;
   font-weight: 700;
   color: var(--p-ink);
@@ -4272,7 +4272,7 @@ dd {
 .fw-citation-ref {
   display: inline-block;
   background: var(--p-teal-tint);
-  color: var(--p-teal);
+  color: var(--p-teal-deep);
   font-size: 11px;
   font-weight: 600;
   padding: 1px 4px;
@@ -4586,7 +4586,7 @@ dd {
   color: var(--p-teal);
 }
 
-.fw-empty-state h2 {
+.fw-empty-state h1 {
   font-size: 24px;
   font-weight: 700;
   margin: 0 0 8px;

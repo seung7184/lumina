@@ -294,7 +294,7 @@ function LoadedWorkspace({ initial }: { initial: WorkspaceState }) {
   return (
     <div className={`functional-workspace ${sidebarOpen ? "" : "sidebar-collapsed"}`}>
       {/* ===== LEFT SIDEBAR ===== */}
-      <aside className="fw-sidebar" data-collapsed={!sidebarOpen}>
+      <aside className="fw-sidebar" data-collapsed={!sidebarOpen} aria-label="Workspace sources">
         <div className="fw-sidebar__header">
           <Link href="/" className="fw-sidebar__brand">
             <span className="brand-mark">L</span>
@@ -333,7 +333,12 @@ function LoadedWorkspace({ initial }: { initial: WorkspaceState }) {
                     onChange={(e) => setSourceInputUrl(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") handleIngest(); }}
                   />
-                  <button type="button" onClick={handleIngest} disabled={ingesting}>
+                  <button
+                    type="button"
+                    onClick={handleIngest}
+                    disabled={ingesting}
+                    aria-label={`Add ${sourceInputKind === "youtube" ? "YouTube" : "webpage"} source`}
+                  >
                     {ingesting ? <Loader2 size={14} className="spin" /> : <Plus size={14} />}
                   </button>
                 </div>
@@ -458,7 +463,7 @@ function LoadedWorkspace({ initial }: { initial: WorkspaceState }) {
               ) : activeBrief ? (
                 <div className="fw-brief-content">
                   <div className="fw-brief-content__header">
-                    <h2>{templateLabels[activeBrief.template][state.language]}</h2>
+                    <h1>{templateLabels[activeBrief.template][state.language]}</h1>
                     <small>
                       {activeBrief.language === "en" ? "English" : activeBrief.language === "ko" ? "한국어" : "Bilingual"}
                       {" · "}
@@ -487,7 +492,7 @@ function LoadedWorkspace({ initial }: { initial: WorkspaceState }) {
               ) : (
                 <div className="fw-brief-area__empty">
                   <BookOpen size={32} />
-                  <h3>Source loaded — choose your lens</h3>
+                  <h1>Source loaded — choose your lens</h1>
                   <p>Select a Decision Lens above to generate a source-grounded brief.</p>
                   <p className="fw-brief-area__segment-count">{activeSource.segments.length} segments ready for analysis</p>
                 </div>
@@ -499,7 +504,7 @@ function LoadedWorkspace({ initial }: { initial: WorkspaceState }) {
 
       {/* ===== RIGHT CONTEXT PANEL ===== */}
       {activeSource && (
-        <aside className="fw-context">
+        <aside className="fw-context" aria-label="Source context">
           <div className="fw-context__tabs">
             <button
               type="button"
@@ -621,7 +626,7 @@ function EmptyState() {
         <div className="fw-empty-state__icon">
           <Sparkles size={40} />
         </div>
-        <h2>Welcome to Lumina</h2>
+        <h1>Welcome to Lumina</h1>
         <p>Turn sources into decisions — in English and Korean.</p>
         <div className="fw-empty-state__steps">
           <div className="fw-empty-state__step">

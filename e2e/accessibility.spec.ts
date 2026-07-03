@@ -15,60 +15,62 @@ async function expectAxeClean(page: Page) {
   expect(results.violations.length, details).toBe(0);
 }
 
-async function openWorkspace(page: Page, width: number, height: number) {
+async function mockAI(page: Page) {
+  await page.route("**/api/generate", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        content: "Lumina converts raw meeting notes into cited decision briefs [0].",
+        template: "executive-brief",
+        language: "en",
+        segmentCount: 1,
+        sourceTitle: "Nova Source",
+      }),
+    });
+  });
+}
+
+async function openCleanWorkspace(page: Page, width: number, height: number) {
   await page.setViewportSize({ width, height });
-  await page.goto("/");
-  await expect(page.getByRole("heading", { name: /People Losing Everything/i })).toBeVisible();
+  await mockAI(page);
+  await page.addInitScript(() => window.localStorage.clear());
+  await page.goto("/workspace");
+  await expect(page.getByRole("heading", { name: "Welcome to Lumina" })).toBeVisible();
+}
+
+async function addTextSource(page: Page) {
+  await page.getByRole("button", { name: "Text" }).click();
+  await page.getByPlaceholder("Paste text content...").fill("Nova source says Lumina converts raw meeting notes into cited decision briefs.");
+  await page.getByRole("button", { name: "Add source" }).click();
+  await expect(page.getByText(/Source loaded: 1 segments extracted/)).toBeVisible();
 }
 
 test.describe("automated accessibility audit", () => {
-  test("desktop workspace has no axe violations", async ({ page }) => {
-    await openWorkspace(page, 1440, 900);
+  test("empty desktop workspace has no axe violations", async ({ page }) => {
+    await openCleanWorkspace(page, 1440, 900);
 
     await expectAxeClean(page);
   });
 
-  test("tablet context drawer has no axe violations", async ({ page }) => {
-    await openWorkspace(page, 1024, 900);
-
-    await page.getByRole("button", { name: "Open Source context" }).click();
-    await expect(page.getByRole("dialog", { name: "Context drawer" })).toBeVisible();
+  test("desktop workspace with source has no axe violations", async ({ page }) => {
+    await openCleanWorkspace(page, 1280, 900);
+    await addTextSource(page);
 
     await expectAxeClean(page);
   });
 
-  test("mobile context sheet has no axe violations", async ({ page }) => {
-    await openWorkspace(page, 390, 844);
-
-    await page.getByRole("button", { name: "Open Assistant context" }).click();
-    await expect(page.getByRole("dialog", { name: "Context drawer" })).toBeVisible();
-
-    await expectAxeClean(page);
-  });
-
-  test("export menu open state has no axe violations", async ({ page }) => {
-    await openWorkspace(page, 1280, 900);
-
-    await page.getByRole("button", { name: "Export", exact: true }).click();
-    await expect(page.getByRole("dialog", { name: "Export options" })).toBeVisible();
+  test("desktop generated brief has no axe violations", async ({ page }) => {
+    await openCleanWorkspace(page, 1280, 900);
+    await addTextSource(page);
+    await page.getByRole("button", { name: "Use at Work" }).click();
+    await expect(page.getByRole("heading", { name: "Executive Brief" })).toBeVisible();
 
     await expectAxeClean(page);
   });
 
-  test("assistant tab and composer state has no axe violations", async ({ page }) => {
-    await openWorkspace(page, 1280, 900);
-
-    await page.getByRole("tab", { name: "Assistant" }).click();
-    await page.getByLabel("Ask anything about this source").fill("What claim needs validation first?");
-
-    await expectAxeClean(page);
-  });
-
-  test("Korean language state has no axe violations", async ({ page }) => {
-    await openWorkspace(page, 1280, 900);
-
-    await page.getByRole("button", { name: "KR" }).click();
-    await expect(page.getByRole("heading", { name: /AI로 전재산을 날리는 사람들과 시간이 무한해진 사람들/ })).toBeVisible();
+  test("mobile stacked workspace has no axe violations", async ({ page }) => {
+    await openCleanWorkspace(page, 390, 844);
+    await addTextSource(page);
 
     await expectAxeClean(page);
   });
